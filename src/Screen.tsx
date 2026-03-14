@@ -45,7 +45,7 @@ export function LandingScreen({ onNext }: { onNext: () => void }) {
   );
 }
 
-export function PersonaScreen({ onNext }: { onNext: () => void }) {
+export function PersonaScreen({ onSelectLearner, onSelectPatient }: { onSelectLearner: () => void, onSelectPatient: () => void }) {
   return (
     <div className="relative flex flex-grow flex-col min-h-screen bg-background-dark text-white font-display">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -59,7 +59,7 @@ export function PersonaScreen({ onNext }: { onNext: () => void }) {
             <p className="text-[#9ca6ba] text-lg max-w-2xl">Choose your path to begin the CPET experience. This choice customizes the language and complexity.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-            <button onClick={onNext} className="persona-card group relative flex flex-col gap-6 p-6 md:p-8 rounded-xl border-2 border-[#282e39] bg-[#1a202c] text-left transition-all duration-300 hover:border-primary hover:shadow-[0_0_20px_rgba(13,89,242,0.4)] hover:-translate-y-1">
+            <button onClick={onSelectLearner} className="persona-card group relative flex flex-col gap-6 p-6 md:p-8 rounded-xl border-2 border-[#282e39] bg-[#1a202c] text-left transition-all duration-300 hover:border-primary hover:shadow-[0_0_20px_rgba(13,89,242,0.4)] hover:-translate-y-1">
               <div className="w-full aspect-video md:aspect-[4/3] rounded-lg bg-cover bg-center overflow-hidden relative shadow-lg">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10"></div>
                 <div className="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuC9ANcTQmlF9ehxY6dENH0T2RxqMzVE_Md4ki5HtHYWZfPhfqPKNgraI4ctM-xTlasTonS1IIc51R7OYRQUpgmX9P2G3D3EtZtsGAHoan0RFxyT2bdHIW96TcfV_J6s2XnokQSO0FkGA0poIdnnx2LhlYqKDoiXk2CuChy7CvB1W0ruZi8VRQuQl4VJ4QlKZCpic12Ox-u4gsrSnuedwbaKcL6DEEUzfegYM5q78QlKjOTyxcDEBat8ntZ-NC5x4ZHdTr6u6QqlXbw')" }}></div>
@@ -75,7 +75,7 @@ export function PersonaScreen({ onNext }: { onNext: () => void }) {
                 <p className="text-[#9ca6ba] text-base leading-relaxed">Explore CPET protocols with full clinical terminology, physiological data breakdowns, and interpretation challenges.</p>
               </div>
             </button>
-            <button onClick={onNext} className="persona-card group relative flex flex-col gap-6 p-6 md:p-8 rounded-xl border-2 border-[#282e39] bg-[#1a202c] text-left transition-all duration-300 hover:border-emerald-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:-translate-y-1">
+            <button onClick={onSelectPatient} className="persona-card group relative flex flex-col gap-6 p-6 md:p-8 rounded-xl border-2 border-[#282e39] bg-[#1a202c] text-left transition-all duration-300 hover:border-emerald-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:-translate-y-1">
               <div className="w-full aspect-video md:aspect-[4/3] rounded-lg bg-cover bg-center overflow-hidden relative shadow-lg">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10"></div>
                 <div className="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAacSpJvH2Vusg2mcHyXG69KYQOIKfiP_5Cer6AgBu3jvhYclntBzvIMGm1-V6Z0UpTFqpXHPGUcI0kOLzuCceW3qU5w2wErQKvtmc4BDbzXkwPBE_jxzvvNo6sS0spzLCbxWKOxt-DgQ2Oo4AaGe82Ou7oJjIGKsJ58dP0l_D4waXy6bUFlZe3BVRJeHmxmgEANULW-Z45EMgb5xTKRa6c4l65F3G6Z8n3IEEUv5LlWSKIYOh0zYbQXOyN_lrngnb4nCeIIlk8Ek8')" }}></div>
