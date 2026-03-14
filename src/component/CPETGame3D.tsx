@@ -3,7 +3,45 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import gsap from 'gsap';
+
+// --- Clinical Decision Databases ---
+const ClinicalDecisionNodes = [
+  {
+    prompt: "RER has crossed 1.15. What does this indicate?",
+    options: ["Maximal Effort", "Artifact", "Calibration Error"],
+    correctAnswer: "Maximal Effort"
+  },
+  {
+    prompt: "Early plateau in O2 Pulse with rising HR indicates?",
+    options: ["Stroke Volume Limit", "Ventilatory Limit", "Poor Motivation"],
+    correctAnswer: "Stroke Volume Limit"
+  },
+  {
+    prompt: "3mm ST segment depression observed. Action?",
+    options: ["Terminate Test", "Push Harder", "Wait for Stage End"],
+    correctAnswer: "Terminate Test"
+  }
+];
+
+const PaediatricDecisionNodes = [
+  {
+    prompt: "You cannot speak clearly with the mask, but feel okay. Action?",
+    options: ["Thumbs Up", "Pull Mask Off", "Stop Pedalling"],
+    correctAnswer: "Thumbs Up"
+  },
+  {
+    prompt: "Your legs feel very tired and heavy. What is the best action?",
+    options: ["Point to Legs", "Close Eyes", "Jump Off Bike"],
+    correctAnswer: "Point to Legs"
+  },
+  {
+    prompt: "Why do we put sticky patches on your chest?",
+    options: ["Listen to Heart", "Run Faster", "Measure Sweat"],
+    correctAnswer: "Listen to Heart"
+  }
+];
 
 // --- Constants & Types ---
 const LANES = [-3, 0, 3];
@@ -12,6 +50,21 @@ const GRAVITY = -0.015;
 const JUMP_FORCE = 0.3;
 
 type Action = 'LANE_LEFT' | 'LANE_RIGHT' | 'JUMP' | 'SLIDE' | null;
+
+interface CPETGame3DProps {
+  persona?: 'learner' | 'patient';
+  protocol?: 'running' | 'cycling';
+  onEnd?: () => void;
+}
+
+interface GameState {
+  score: number;
+  isBulletTime: boolean;
+  prompt: string | null;
+  feedback: { text: string; isCorrect: boolean } | null;
+  isLoading: boolean;
+  loadProgress: number;
+}
 
 // --- 1. Unified Input Bridge ---
 class InputManager {
@@ -101,16 +154,7 @@ class ObjectPool {
   }
 }
 
-interface GameState {
-  score: number;
-  isBulletTime: boolean;
-  prompt: string | null;
-  feedback: { text: string; isCorrect: boolean } | null;
-  isLoading: boolean;
-  loadProgress: number;
-}
-
-export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
+export default function CPETGame3D({ persona = 'learner', protocol = 'running', onEnd }: CPETGame3DProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [uiState, setUiState] = useState<GameState>({
@@ -122,12 +166,11 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
     loadProgress: 0,
   });
 
-  // Mutable state for the animation loop
   const gameState = useRef({
     score: 0,
     timeScale: 1.0,
     speed: RUN_SPEED,
-    targetLane: 1, // 0: Left, 1: Center, 2: Right
+    targetLane: 1, 
     velocity: new THREE.Vector3(),
     isJumping: false,
     isSliding: false,
@@ -137,20 +180,6 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
     currentPrompt: null as string | null,
     correctAnswer: null as string | null,
   });
-
-  // Theme Toggle Handler
-  const toggleTheme = () => {
-    setIsDarkMode(prev => !prev);
-  };
-
-  // Synchronise DOM with Tailwind dark class
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkMode]);
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -164,65 +193,44 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
       setUiState(prev => ({ ...prev, isLoading: false }));
     };
 
-    // --- 3. 3D Scene Geometry & Camera ---
+    // --- Scene Setup ---
     const scene = new THREE.Scene();
     const darkBg = new THREE.Color(0x0f172a);
-    const lightBg = new THREE.Color(0xf5f6f8);
-    scene.background = isDarkMode ? darkBg : lightBg;
-    scene.fog = new THREE.FogExp2(isDarkMode ? 0x0f172a : 0xf5f6f8, 0.015);
+    scene.background = darkBg;
+    scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
 
-    // PerspectiveCamera: 75 FOV, pos (0, 5, 10), tilt -15 deg
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200);
     camera.position.set(0, 5, 10);
-    camera.rotation.x = -15 * (Math.PI / 180); // Tilt down 15 degrees
+    camera.rotation.x = -15 * (Math.PI / 180);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     mountRef.current.appendChild(renderer.domElement);
 
-    // --- Post-Processing (UnrealBloomPass) ---
     const composer = new EffectComposer(renderer);
-    const renderPass = new RenderPass(scene, camera);
-    composer.addPass(renderPass);
-    
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-    bloomPass.enabled = isDarkMode; // Only enable bloom in dark mode
-    composer.addPass(bloomPass);
+    composer.addPass(new RenderPass(scene, camera));
+    composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85));
 
-    // --- Lighting ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, isDarkMode ? 0.6 : 1.5);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
-
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
     dirLight.position.set(10, 20, 10);
     dirLight.castShadow = true;
-    dirLight.shadow.camera.top = 20;
-    dirLight.shadow.camera.bottom = -20;
-    dirLight.shadow.camera.left = -20;
-    dirLight.shadow.camera.right = 20;
     scene.add(dirLight);
 
-    // --- Curved World Shader ---
     const curvedShader = (shader: THREE.Shader) => {
       shader.vertexShader = shader.vertexShader.replace(
         '#include <begin_vertex>',
-        `
-        #include <begin_vertex>
-        float dist = transformed.z - cameraPosition.z;
-        transformed.y -= (dist * dist) * 0.0015; // Curve down over horizon
-        `
+        `#include <begin_vertex>
+         float dist = transformed.z - cameraPosition.z;
+         transformed.y -= (dist * dist) * 0.0015;`
       );
     };
 
-    // --- Environment (Track) ---
     const trackGeo = new THREE.PlaneGeometry(20, 400, 10, 100);
-    const trackMat = new THREE.MeshStandardMaterial({ 
-      color: 0x1e293b, 
-      roughness: 0.8,
-    });
+    const trackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
     trackMat.onBeforeCompile = curvedShader;
     const track = new THREE.Mesh(trackGeo, trackMat);
     track.rotation.x = -Math.PI / 2;
@@ -236,49 +244,52 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
     gridHelper.material.onBeforeCompile = curvedShader;
     scene.add(gridHelper);
 
-    // --- Assets & Entities ---
-    // Runner (Physiologist Avatar)
+    // --- Avatar Pipeline (GLTFLoader with Fallback) ---
+    const playerGroup = new THREE.Group();
+    playerGroup.position.set(0, 1, 0);
+    scene.add(playerGroup);
+
+    // Fallback Mesh
     const runnerGeo = new THREE.CapsuleGeometry(0.4, 1, 4, 16);
-    const runnerMat = new THREE.MeshStandardMaterial({ 
-      color: 0x0ea5e9, 
-      emissive: isDarkMode ? 0x0284c7 : 0x000000,
-      emissiveIntensity: 0.5,
-      roughness: 0.2,
-      metalness: 0.8
-    });
-    const runner = new THREE.Mesh(runnerGeo, runnerMat);
-    runner.position.set(0, 1, 0);
-    runner.castShadow = true;
-    scene.add(runner);
+    const runnerMat = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, emissive: 0x0284c7, emissiveIntensity: 0.5 });
+    const fallbackMesh = new THREE.Mesh(runnerGeo, runnerMat);
+    fallbackMesh.castShadow = true;
+    playerGroup.add(fallbackMesh);
 
-    // Materials
-    const matVO2 = new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: isDarkMode ? 0x2563eb : 0x000000, emissiveIntensity: 1 });
-    const matHR = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: isDarkMode ? 0xdc2626 : 0x000000, emissiveIntensity: 1 });
-    const matVCO2 = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: isDarkMode ? 0x059669 : 0x000000, emissiveIntensity: 1 });
+    let mixer: THREE.AnimationMixer;
+    const gltfLoader = new GLTFLoader(manager);
+    const modelPath = protocol === 'cycling' ? '/models/cyclist.glb' : '/models/runner.glb';
+
+    gltfLoader.load(
+      modelPath,
+      (gltf) => {
+        playerGroup.remove(fallbackMesh);
+        const model = gltf.scene;
+        model.scale.set(1.2, 1.2, 1.2);
+        model.position.y = -1; // Adjust GLTF origin
+        model.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) child.castShadow = true;
+        });
+        playerGroup.add(model);
+
+        if (gltf.animations.length > 0) {
+          mixer = new THREE.AnimationMixer(model);
+          mixer.clipAction(gltf.animations[0]).play();
+        }
+      },
+      undefined,
+      (error) => console.warn('Model routing failed, using fallback.', error)
+    );
+
+    // --- Entities & Object Pools ---
+    const matVO2 = new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x2563eb, emissiveIntensity: 1 });
     const matObstacle = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.9 });
-    const matCloud = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
-    const matPortal = new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: isDarkMode ? 0x9333ea : 0x000000, emissiveIntensity: 1.5, transparent: true, opacity: 0.8 });
+    const matPortal = new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: 0x9333ea, emissiveIntensity: 1.5, transparent: true, opacity: 0.8 });
+    [matVO2, matObstacle, matPortal].forEach(m => m.onBeforeCompile = curvedShader);
 
-    [matVO2, matHR, matVCO2, matObstacle, matCloud, matPortal].forEach(m => m.onBeforeCompile = curvedShader);
-
-    // Object Pools
     const poolVO2 = new ObjectPool(() => {
       const m = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), matVO2);
-      m.userData = { type: 'token', value: 10, name: 'VO2' };
-      scene.add(m);
-      return m;
-    }, 10);
-
-    const poolHR = new ObjectPool(() => {
-      const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), matHR);
-      m.userData = { type: 'token', value: 15, name: 'HR' };
-      scene.add(m);
-      return m;
-    }, 10);
-
-    const poolVCO2 = new ObjectPool(() => {
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.8, 16), matVCO2);
-      m.userData = { type: 'token', value: 15, name: 'VCO2' };
+      m.userData = { type: 'token', value: 10 };
       scene.add(m);
       return m;
     }, 10);
@@ -286,13 +297,6 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
     const poolObstacleLow = new ObjectPool(() => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1, 0.5), matObstacle);
       m.userData = { type: 'obstacle', penalty: 20, isLow: true };
-      scene.add(m);
-      return m;
-    }, 5);
-
-    const poolObstacleHigh = new ObjectPool(() => {
-      const m = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), matCloud);
-      m.userData = { type: 'obstacle', penalty: 20, isHigh: true };
       scene.add(m);
       return m;
     }, 5);
@@ -305,23 +309,29 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
       canvas.height = 128;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.fillStyle = isDarkMode ? '#9333ea' : '#0d59f2'; 
+        ctx.fillStyle = '#9333ea'; 
         ctx.fillRect(0, 0, 256, 128);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 40px sans-serif';
+        ctx.font = 'bold 30px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(text, 128, 64);
+        
+        // Simple text wrap handling
+        const words = text.split(' ');
+        if(words.length > 2) {
+            ctx.fillText(words.slice(0, 2).join(' '), 128, 48);
+            ctx.fillText(words.slice(2).join(' '), 128, 80);
+        } else {
+            ctx.fillText(text, 128, 64);
+        }
       }
       return new THREE.CanvasTexture(canvas);
     };
 
-    const spawnObject = (zPos: number, isPortalRow = false) => {
-      if (isPortalRow) {
-        const options = ['Cardiac', 'Pulmonary', 'Metabolic'];
-        options.sort(() => Math.random() - 0.5);
-        
-        for (let i = 0; i < 3; i++) {
+    const spawnObject = (zPos: number, isPortalRow = false, portalOptions: string[] = []) => {
+      if (isPortalRow && portalOptions.length > 0) {
+        const options = [...portalOptions].sort(() => Math.random() - 0.5);
+        for (let i = 0; i < Math.min(3, options.length); i++) {
           const portalGroup = new THREE.Group();
           portalGroup.position.set(LANES[i], 1.5, zPos);
 
@@ -331,9 +341,7 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
 
           const labelGeo = new THREE.PlaneGeometry(2, 1);
           const labelMat = new THREE.MeshBasicMaterial({ 
-            map: createTextTexture(options[i]),
-            transparent: true,
-            opacity: 0.9
+            map: createTextTexture(options[i]), transparent: true, opacity: 0.9 
           });
           labelMat.onBeforeCompile = curvedShader;
           const labelMesh = new THREE.Mesh(labelGeo, labelMat);
@@ -348,51 +356,38 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
       }
 
       const lane = LANES[Math.floor(Math.random() * 3)];
-      const rand = Math.random();
-      let mesh: THREE.Mesh;
-
-      if (rand < 0.4) {
-        mesh = poolVO2.get();
+      if (Math.random() < 0.7) {
+        const mesh = poolVO2.get();
         mesh.position.set(lane, 1, zPos);
-      } else if (rand < 0.6) {
-        mesh = poolHR.get();
-        mesh.position.set(lane, 1, zPos);
-      } else if (rand < 0.7) {
-        mesh = poolVCO2.get();
-        mesh.position.set(lane, 1, zPos);
-      } else if (rand < 0.85) {
-        mesh = poolObstacleLow.get();
-        mesh.position.set(lane, 0.5, zPos);
       } else {
-        mesh = poolObstacleHigh.get();
-        mesh.position.set(lane, 2.5, zPos);
+        const mesh = poolObstacleLow.get();
+        mesh.position.set(lane, 0.5, zPos);
       }
     };
 
     // Initial spawn
-    for (let i = 0; i < 20; i++) {
-      spawnObject(-20 - i * 15);
-    }
+    for (let i = 0; i < 20; i++) spawnObject(-20 - i * 15);
 
-    // --- Input Manager ---
     const inputManager = new InputManager();
-
-    // --- Game Loop ---
     let animationId: number;
     const clock = new THREE.Clock();
 
     const triggerDecisionNode = () => {
       gameState.current.isBulletTime = true;
-      gameState.current.timeScale = 0.2; // Bullet Time
-      gameState.current.currentPrompt = "If O2 Pulse flattens early but VE reserve is high, what system is limiting?";
-      gameState.current.correctAnswer = "Cardiac";
+      gameState.current.timeScale = 0.2; 
       
-      spawnObject(-60, true);
+      const activeBank = persona === 'learner' ? ClinicalDecisionNodes : PaediatricDecisionNodes;
+      const randomNode = activeBank[Math.floor(Math.random() * activeBank.length)];
+      
+      gameState.current.currentPrompt = randomNode.prompt;
+      gameState.current.correctAnswer = randomNode.correctAnswer;
+      
+      spawnObject(-60, true, randomNode.options);
 
       setUiState(prev => ({
         ...prev,
         isBulletTime: true,
-        prompt: gameState.current.currentPrompt,
+        prompt: randomNode.prompt,
       }));
     };
 
@@ -417,7 +412,7 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
         isBulletTime: false,
         prompt: null,
         feedback: {
-          text: isCorrect ? "Correct! Massive Speed Boost!" : "Incorrect! Stumble Penalty.",
+          text: isCorrect ? "Protocol Calibrated! +Speed" : "Artifact Detected! Penalty.",
           isCorrect
         }
       }));
@@ -430,50 +425,44 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
       const delta = clock.getDelta();
       const state = gameState.current;
 
-      if (Math.random() < 0.1) {
-        setUiState(prev => ({ ...prev, score: state.score }));
-      }
-
-      if (state.score >= 1000 && onEnd) {
-        onEnd();
-        return;
-      }
+      if (Math.random() < 0.1) setUiState(prev => ({ ...prev, score: state.score }));
+      if (state.score >= 1000 && onEnd) { onEnd(); return; }
 
       if (!state.isBulletTime) {
         state.timeSinceLastPortal += delta;
         state.speed += 0.0001; 
-        
-        if (state.timeSinceLastPortal > 30) {
-          triggerDecisionNode();
-        }
+        if (state.timeSinceLastPortal > 25) triggerDecisionNode();
       }
 
       const effectiveSpeed = state.speed * state.timeScale;
 
-      // Process Input
+      // GLTF Animation Logic
+      if (mixer) {
+        mixer.update(delta * state.timeScale * (state.speed / RUN_SPEED));
+      }
+
       const action = inputManager.consumeAction();
       if (action === 'LANE_LEFT' && state.targetLane > 0) {
         state.targetLane--;
-        gsap.to(runner.position, { x: LANES[state.targetLane], duration: 0.4, ease: "power2.out" });
+        gsap.to(playerGroup.position, { x: LANES[state.targetLane], duration: 0.4, ease: "power2.out" });
       } else if (action === 'LANE_RIGHT' && state.targetLane < 2) {
         state.targetLane++;
-        gsap.to(runner.position, { x: LANES[state.targetLane], duration: 0.4, ease: "power2.out" });
+        gsap.to(playerGroup.position, { x: LANES[state.targetLane], duration: 0.4, ease: "power2.out" });
       } else if (action === 'JUMP' && !state.isJumping && !state.isSliding) {
         state.velocity.y = JUMP_FORCE;
         state.isJumping = true;
       } else if (action === 'SLIDE' && !state.isJumping && !state.isSliding) {
         state.isSliding = true;
         state.slideTimer = 40;
-        gsap.to(runner.scale, { y: 0.5, duration: 0.2 });
-        gsap.to(runner.position, { y: 0.5, duration: 0.2 });
+        gsap.to(playerGroup.scale, { y: 0.5, duration: 0.2 });
+        gsap.to(playerGroup.position, { y: 0.5, duration: 0.2 });
       }
 
-      // Physics
       if (state.isJumping) {
         state.velocity.y += GRAVITY;
-        runner.position.y += state.velocity.y;
-        if (runner.position.y <= 1) {
-          runner.position.y = 1;
+        playerGroup.position.y += state.velocity.y;
+        if (playerGroup.position.y <= 1) {
+          playerGroup.position.y = 1;
           state.isJumping = false;
           state.velocity.y = 0;
         }
@@ -483,15 +472,12 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
         state.slideTimer--;
         if (state.slideTimer <= 0) {
           state.isSliding = false;
-          gsap.to(runner.scale, { y: 1, duration: 0.2 });
-          gsap.to(runner.position, { y: 1, duration: 0.2 });
+          gsap.to(playerGroup.scale, { y: 1, duration: 0.2 });
+          gsap.to(playerGroup.position, { y: 1, duration: 0.2 });
         }
       }
 
-      // Move & Cull Objects
-      const allPools = [poolVO2, poolHR, poolVCO2, poolObstacleLow, poolObstacleHigh];
-      
-      allPools.forEach(pool => {
+      [poolVO2, poolObstacleLow].forEach(pool => {
         const activeMeshes = pool.getActive();
         for (let i = activeMeshes.length - 1; i >= 0; i--) {
           const obj = activeMeshes[i];
@@ -499,45 +485,33 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
 
           if (obj.userData.type === 'token') {
             obj.rotation.y += 0.05;
-            obj.rotation.x += 0.02;
           }
 
-          const dist = runner.position.distanceTo(obj.position);
+          const dist = playerGroup.position.distanceTo(obj.position);
           if (dist < 1.2) {
             if (obj.userData.type === 'token') {
               state.score += obj.userData.value;
               pool.release(obj);
             } else if (obj.userData.type === 'obstacle') {
-              const isDodgingHigh = obj.userData.isHigh && state.isSliding;
-              const isDodgingLow = obj.userData.isLow && state.isJumping;
-              
-              if (!isDodgingHigh && !isDodgingLow) {
+              if (!(obj.userData.isLow && state.isJumping)) {
                 state.score -= obj.userData.penalty;
                 state.speed = Math.max(RUN_SPEED, state.speed - 0.05);
-                
-                // Flash red
-                const mat = runner.material as THREE.MeshStandardMaterial;
-                const originalEmissive = mat.emissive.getHex();
-                mat.emissive.setHex(0xff0000);
-                setTimeout(() => mat.emissive.setHex(originalEmissive), 200);
-
                 pool.release(obj);
               }
             }
-          } else if (obj.position.z > 10) { // Culling Z > 10
+          } else if (obj.position.z > 10) {
             pool.release(obj);
             if (!state.isBulletTime) spawnObject(-150);
           }
         }
       });
 
-      // Move Portals
       for (let i = activePortals.length - 1; i >= 0; i--) {
         const portal = activePortals[i];
         portal.position.z += effectiveSpeed;
-        portal.children[0].rotation.z -= 0.02; // Rotate torus
+        portal.children[0].rotation.z -= 0.02;
 
-        const dist = runner.position.distanceTo(portal.position);
+        const dist = playerGroup.position.distanceTo(portal.position);
         if (dist < 1.5) {
           resolveDecision(portal.userData.answer);
           activePortals.forEach(p => scene.remove(p));
@@ -549,17 +523,13 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
         }
       }
 
-      // Camera follow
-      camera.position.x += (runner.position.x * 0.5 - camera.position.x) * 0.1;
-      
+      camera.position.x += (playerGroup.position.x * 0.5 - camera.position.x) * 0.1;
       composer.render();
     };
 
-    // Simulate loading delay for demonstration
     setTimeout(() => manager.onLoad(), 500);
     animate();
 
-    // --- Responsive Design ---
     const handleResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
@@ -568,7 +538,6 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
     };
     window.addEventListener('resize', handleResize);
 
-    // --- Cleanup ---
     return () => {
       inputManager.dispose();
       window.removeEventListener('resize', handleResize);
@@ -576,29 +545,21 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
       if (mountRef.current) mountRef.current.removeChild(renderer.domElement);
       renderer.dispose();
     };
-  }, []);
+  }, [persona, protocol]); // Re-mount if persona/protocol changes
 
-  // --- Dynamic Theming Effect ---
-  useEffect(() => {
-    // We animate the background colour of the scene directly if we had access to it here,
-    // but since scene is inside the other useEffect, we handle the DOM classes here.
-    // The Three.js scene background interpolation can be handled by exposing the scene or 
-    // simply re-rendering. For a true 500ms linear interpolation in Three.js, we'd need 
-    // a ref to the scene. Let's do a quick DOM transition for the HUD.
-  }, [isDarkMode]);
+  // Dynamic Acidosis Logic
+  const acidosisLevel = Math.min(100, Math.max(10, ((uiState.score / 1000) * 100)));
 
-return (
-    <div className={`relative w-full h-screen overflow-hidden touch-none font-display transition-colors duration-500 ${isDarkMode ? 'bg-background-dark text-white' : 'bg-background-light text-slate-900'}`}>
+  return (
+    <div className={`relative w-full h-screen overflow-hidden touch-none font-display transition-colors duration-500 bg-background-dark text-white`}>
       
-      {/* 3D Scene Layer */}
       <div ref={mountRef} className="absolute inset-0 z-0" />
 
-      {/* Loading Overlay */}
       {uiState.isLoading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#0f172a] text-white">
           <div className="flex flex-col items-center gap-4">
             <span className="material-symbols-outlined text-6xl text-primary animate-spin">sync</span>
-            <h2 className="text-2xl font-black tracking-widest uppercase italic">Initializing Sim</h2>
+            <h2 className="text-2xl font-black tracking-widest uppercase italic">Initializing Engine</h2>
             <div className="w-64 h-2 bg-slate-800 rounded-full overflow-hidden">
               <div className="h-full bg-primary transition-all duration-300" style={{ width: `${uiState.loadProgress}%` }}></div>
             </div>
@@ -609,7 +570,6 @@ return (
       {!uiState.isLoading && (
         <div className="absolute inset-0 z-10 pointer-events-none p-6 md:p-10 flex flex-col justify-between">
           
-          {/* TOP BAR: Central HUD Dock */}
           <div className="flex justify-center w-full pointer-events-auto">
             <div className="glass-panel px-8 py-4 rounded-full flex items-center gap-10 shadow-2xl border border-white/10 backdrop-blur-xl box-glow">
               <div className="flex flex-col items-center min-w-[80px]">
@@ -642,32 +602,25 @@ return (
             </div>
           </div>
 
-          {/* MIDDLE: Floating Notifications (Optional Placeholder) */}
           <div className="flex-1" />
 
-          {/* BOTTOM HUD: Protocol & Acidosis */}
           <div className="flex items-end justify-between w-full pointer-events-auto">
-            
-            {/* Left: Stage Status */}
             <div className="glass-panel p-1 rounded-[2.5rem] border border-white/10 shadow-xl">
               <div className="bg-primary/20 border border-primary/30 rounded-[2.2rem] px-10 py-6 flex flex-col justify-center min-w-[200px]">
                 <span className="text-primary text-[10px] font-black uppercase tracking-[0.3em] mb-1">Current Stage</span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-black italic">2</span>
-                  <span className="text-xl font-bold text-white/30">/ 3</span>
+                  <span className="text-5xl font-black italic">{protocol === 'cycling' ? 'Ramp' : 'Bruce'}</span>
                 </div>
-                <span className="text-white text-xs font-bold mt-2 uppercase tracking-widest bg-white/5 py-1 px-3 rounded-full">Aerobic Zone</span>
+                <span className="text-white text-xs font-bold mt-2 uppercase tracking-widest bg-white/5 py-1 px-3 rounded-full">{persona === 'learner' ? 'Clinical Mode' : 'Patient Mode'}</span>
               </div>
             </div>
 
-            {/* Right: Acidosis Meter & Controls */}
             <div className="flex flex-col items-center gap-6">
               <div className="glass-panel p-3 rounded-full h-[320px] w-[70px] flex flex-col items-center justify-end relative overflow-hidden border border-white/10">
                 <div className="absolute top-6 w-full text-center">
                   <span className="material-symbols-outlined text-red-500 text-2xl animate-pulse">warning</span>
                 </div>
-                {/* The Acidosis Gradient Bar */}
-                <div className="w-2.5 h-[65%] acidosis-gradient rounded-full relative shadow-[0_0_15px_rgba(13,89,242,0.3)]">
+                <div className="w-2.5 acidosis-gradient rounded-full relative shadow-[0_0_15px_rgba(13,89,242,0.3)] transition-all duration-300" style={{ height: `${acidosisLevel}%` }}>
                   <div className="absolute top-0 left-0 right-0 h-1.5 bg-white shadow-[0_0_15px_white] rounded-full"></div>
                 </div>
                 <span className="material-symbols-outlined text-white/30 text-2xl mt-6 mb-2">water_drop</span>
@@ -682,7 +635,6 @@ return (
             </div>
           </div>
 
-          {/* Decision Node / Bullet Time Overlay */}
           {uiState.isBulletTime && uiState.prompt && (
             <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 z-50 pointer-events-none">
               <div className="bg-indigo-900/90 backdrop-blur-xl border-2 border-indigo-400/50 rounded-3xl p-10 text-center shadow-[0_0_60px_rgba(79,70,229,0.4)] animate-in fade-in zoom-in duration-500">
@@ -697,7 +649,6 @@ return (
             </div>
           )}
 
-          {/* Feedback Toast */}
           {uiState.feedback && (
             <div className="absolute bottom-40 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
               <div className={`px-8 py-4 rounded-full border-2 backdrop-blur-md shadow-2xl animate-in slide-in-from-bottom-10 ${uiState.feedback.isCorrect ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-red-500/20 border-red-500 text-red-400'}`}>
