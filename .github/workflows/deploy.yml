@@ -8,10 +8,6 @@ permissions:
   contents: read
   id-token: write
 
-env:
-  # This addresses your Node.js deprecation warning
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
@@ -23,7 +19,6 @@ jobs:
         id: auth
         uses: google-github-actions/auth@v2
         with:
-          # Use your specific Project Number and Service Account
           workload_identity_provider: 'projects/1031321304123/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
           service_account: 'github-actions-deploy@smart-aero.iam.gserviceaccount.com'
           create_credentials_file: true
@@ -34,8 +29,8 @@ jobs:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           projectId: smart-aero
           channelId: live
-          # This satisfies the "required" check without a physical key
-          firebaseServiceAccount: "" 
+          # This dummy value bypasses the 'Input required' error
+          firebaseServiceAccount: "WIF_AUTHENTICATED" 
         env:
-          # This tells the Firebase CLI to use the WIF token
+          # This is the actual key that allows Firebase to talk to Google
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
