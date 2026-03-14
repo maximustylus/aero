@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AERO v1.0 | CPET Simulation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #0f172a; }
+        canvas { display: block; }
+    </style>
+</head>
+<body class="bg-slate-900">
+    <div class="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-10 pointer-events-none">
+        <div class="bg-black/40 backdrop-blur-md p-4 rounded-lg border border-white/10">
+            <h1 class="text-white font-bold text-xl tracking-tighter">AERO <span class="text-blue-500">CPX</span></h1>
+            <p class="text-slate-400 text-xs uppercase tracking-widest">Clinical Orientation Sim</p>
+        </div>
+        <div class="flex gap-4">
+            <div class="bg-blue-500/20 backdrop-blur-md px-4 py-2 rounded-md border border-blue-500/30">
+                <span class="text-blue-400 text-xs block font-semibold">VO₂ (ml/kg/min)</span>
+                <span id="vo2-val" class="text-white font-mono text-lg font-bold">0.0</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-container"></div>
+
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
+        
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0f172a);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('game-container').appendChild(renderer.domElement);
+
+        // AERO Prototype Cube
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshStandardMaterial({ color: 0x3b82f6 });
+        const cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 5, 5);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
+
+        camera.position.z = 5;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            cube.rotation.x += 0.01;
+            cube.rotation.y += 0.01;
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
