@@ -32,6 +32,6 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
 
       - name: Deploy AERO
-        run: firebase deploy --only hosting --project smart-aero --non-interactive
+        run: firebase deploy --only hosting:smart-aero --project smart-aero --non-interactive
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
