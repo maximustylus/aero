@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&family=Noto+Sans:wght@400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0d59f2;
+  --color-primary-glow: #3b82f6;
+  --color-game-primary: #6366f1;
+  --color-game-accent: #facc15;
+  --color-game-secondary: #ec4899;
+  --color-game-cyan: #06b6d4;
+  --color-background-light: #f5f6f8;
+  --color-background-dark: #101622;
+  --color-surface-dark: #0f172a;
+  --color-surface-light: rgba(255, 255, 255, 0.1);
+  --color-surface-highlight: #282e39;
+  --color-surface-border: #282e39;
+  --color-accent-success: #0bda5e;
+  --color-accent-purple: #8b5cf6;
+
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Noto Sans', sans-serif;
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-fast: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-tilt: tilt 10s infinite linear;
+  --animate-shimmer: shimmer 2s infinite;
+  --animate-scan: scan 4s linear infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes tilt {
+    0%, 50%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(0.5deg); }
+    75% { transform: rotate(-0.5deg); }
+  }
+  @keyframes shimmer {
+    100% { transform: translateX(100%); }
+  }
+  @keyframes scan {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+  .skew-box {
+    transform: skewX(-12deg);
+  }
+  .skew-box-content {
+    transform: skewX(12deg);
+  }
+  .game-text-shadow {
+    text-shadow: 0 0 20px rgba(99, 102, 241, 0.6), 0 0 40px rgba(147, 51, 234, 0.4);
+  }
+  .bg-hex-pattern {
+    background-color: transparent;
+    background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCgaiNBB5wNGm4qLZOpcSDtLL59Pdc3LSNpQvxWTo0UMVSWJEgFVdOqp02A8xzIHTeNcQNjy4U6aP2-eh_RpuCAsmu8X2ZGWPuGQIWqWPZ_wvjpb8Zy6ILxCQEHYVLdw18fqAEUoLG8jhhzFwVVIUH6i7SYyFN5n7-cQpWUG7oqIy5XFdg2YGdx2nKGONtofQjXsxb2oCDIwMYWdb92_Nl6dZvGtx0LNubsLyYmoUNmLZBeK2ukbVteA5-dyOjlToggBLlTxIeyznw');
+  }
+  .acidosis-gradient {
+    background: linear-gradient(to top, #0d59f2, #a855f7, #ef4444);
+  }
+}
