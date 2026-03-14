@@ -26,17 +26,17 @@ By the end of the simulation, learners will instinctively understand:
    git clone [https://github.com/maximustylus/aero.git](https://github.com/maximustylus/aero.git)
    cd aero
 
-2. **Install dependencies:
+2. **Install dependencies**:
    ```bash
    npm install
 
-3. **Run local development server:
+3. **Run local development server**:
    ```bash
    npm run dev
 
-4. **Deploy to Firebase:
+4. **Deploy to Firebase**:
    ```bash
    git push origin main # Triggers GitHub Action deploy.yml
 
 ## ⚖️ License
-* **Proprietary. All rights reserved by Muhammad Alif
+* **Proprietary. All rights reserved by Muhammad Alif**
