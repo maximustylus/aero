@@ -590,74 +590,118 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
 return (
     <div className={`relative w-full h-screen overflow-hidden touch-none font-display transition-colors duration-500 ${isDarkMode ? 'bg-background-dark text-white' : 'bg-background-light text-slate-900'}`}>
       
-      {/* 3D Container: Always rendered to prevent crashing */}
-      <div ref={mountRef} className="absolute inset-0" />
+      {/* 3D Scene Layer */}
+      <div ref={mountRef} className="absolute inset-0 z-0" />
 
-      {/* Loading Screen: Hovers over the game until Three.js is ready */}
+      {/* Loading Overlay */}
       {uiState.isLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900 text-white">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#0f172a] text-white">
           <div className="flex flex-col items-center gap-4">
-            <span className="material-symbols-outlined text-6xl text-blue-500 animate-spin">sync</span>
-            <h2 className="text-2xl font-bold tracking-widest uppercase">Loading Assets</h2>
-            <div className="w-64 h-2 bg-slate-700 rounded-full overflow-hidden">
-              <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${uiState.loadProgress}%` }}></div>
+            <span className="material-symbols-outlined text-6xl text-primary animate-spin">sync</span>
+            <h2 className="text-2xl font-black tracking-widest uppercase italic">Initializing Sim</h2>
+            <div className="w-64 h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-full bg-primary transition-all duration-300" style={{ width: `${uiState.loadProgress}%` }}></div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Game HUD: Only appears once loading is false */}
       {!uiState.isLoading && (
-        <div className="absolute inset-0 z-10 flex flex-col h-full p-4 md:p-8 justify-between pointer-events-none">
+        <div className="absolute inset-0 z-10 pointer-events-none p-6 md:p-10 flex flex-col justify-between">
           
-          {/* Top Bar Stats */}
-          <div className="flex flex-col xl:flex-row gap-4 w-full items-start xl:items-center justify-between pointer-events-auto">
-            <div className="glass-panel px-5 py-3 rounded-full flex items-center gap-3 shadow-lg">
-              <button onClick={onEnd} className="opacity-70 hover:opacity-100">
-                <span className="material-symbols-outlined text-2xl">arrow_back</span>
-              </button>
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase tracking-widest text-blue-400 font-bold">Protocol</span>
-                <h1 className="text-lg font-bold leading-none">Running (Treadmill)</h1>
-              </div>
-            </div>
-
-            <div className="glass-panel px-6 py-3 rounded-full flex items-center gap-8 shadow-2xl box-glow">
+          {/* TOP BAR: Central HUD Dock */}
+          <div className="flex justify-center w-full pointer-events-auto">
+            <div className="glass-panel px-8 py-4 rounded-full flex items-center gap-10 shadow-2xl border border-white/10 backdrop-blur-xl box-glow">
               <div className="flex flex-col items-center min-w-[80px]">
-                <span className="text-xs font-medium opacity-60">SCORE</span>
-                <span className="text-3xl font-bold tabular-nums">{uiState.score}</span>
+                <div className="flex items-center gap-1 mb-1">
+                  <span className="material-symbols-outlined text-red-500 text-sm animate-pulse">favorite</span>
+                  <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">HR</span>
+                </div>
+                <span className="text-4xl font-black tabular-nums">148 <span className="text-xs opacity-40">bpm</span></span>
               </div>
-              <div className="flex flex-col items-center min-w-[80px]">
-                <span className="text-xs font-medium opacity-60">HR</span>
-                <span className="text-3xl font-bold text-red-500">148</span>
-              </div>
+              
+              <div className="h-10 w-px bg-white/10"></div>
+              
               <div className="flex flex-col items-center min-w-[100px]">
-                <span className="text-xs font-bold text-blue-400">VO₂</span>
-                <span className="text-3xl font-bold">32.1</span>
+                <div className="flex items-center gap-1 mb-1">
+                  <span className="material-symbols-outlined text-primary text-sm">vital_signs</span>
+                  <span className="text-[10px] font-bold text-primary uppercase tracking-widest">VO₂ Peak</span>
+                </div>
+                <span className="text-4xl font-black tabular-nums text-glow">32.1</span>
+              </div>
+
+              <div className="h-10 w-px bg-white/10"></div>
+
+              <div className="flex flex-col items-center min-w-[80px]">
+                <div className="flex items-center gap-1 mb-1 text-yellow-500">
+                  <span className="material-symbols-outlined text-sm">stars</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Score</span>
+                </div>
+                <span className="text-4xl font-black tabular-nums">{uiState.score}</span>
               </div>
             </div>
           </div>
 
-          {/* Bottom Controls */}
-          <div className="flex w-full items-end justify-between pointer-events-auto pb-4">
-            <div className="glass-panel p-4 rounded-2xl flex flex-col min-w-[160px]">
-              <span className="text-blue-400 text-xs font-bold uppercase mb-1">Current Stage</span>
-              <span className="text-3xl font-bold">2 <span className="text-sm opacity-50">/ 3</span></span>
+          {/* MIDDLE: Floating Notifications (Optional Placeholder) */}
+          <div className="flex-1" />
+
+          {/* BOTTOM HUD: Protocol & Acidosis */}
+          <div className="flex items-end justify-between w-full pointer-events-auto">
+            
+            {/* Left: Stage Status */}
+            <div className="glass-panel p-1 rounded-[2.5rem] border border-white/10 shadow-xl">
+              <div className="bg-primary/20 border border-primary/30 rounded-[2.2rem] px-10 py-6 flex flex-col justify-center min-w-[200px]">
+                <span className="text-primary text-[10px] font-black uppercase tracking-[0.3em] mb-1">Current Stage</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-black italic">2</span>
+                  <span className="text-xl font-bold text-white/30">/ 3</span>
+                </div>
+                <span className="text-white text-xs font-bold mt-2 uppercase tracking-widest bg-white/5 py-1 px-3 rounded-full">Aerobic Zone</span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-4">
-               <button onClick={onEnd} className="h-20 w-20 rounded-full bg-red-600 shadow-lg flex items-center justify-center text-white">
-                <span className="material-symbols-outlined text-4xl font-bold">stop</span>
+            {/* Right: Acidosis Meter & Controls */}
+            <div className="flex flex-col items-center gap-6">
+              <div className="glass-panel p-3 rounded-full h-[320px] w-[70px] flex flex-col items-center justify-end relative overflow-hidden border border-white/10">
+                <div className="absolute top-6 w-full text-center">
+                  <span className="material-symbols-outlined text-red-500 text-2xl animate-pulse">warning</span>
+                </div>
+                {/* The Acidosis Gradient Bar */}
+                <div className="w-2.5 h-[65%] acidosis-gradient rounded-full relative shadow-[0_0_15px_rgba(13,89,242,0.3)]">
+                  <div className="absolute top-0 left-0 right-0 h-1.5 bg-white shadow-[0_0_15px_white] rounded-full"></div>
+                </div>
+                <span className="material-symbols-outlined text-white/30 text-2xl mt-6 mb-2">water_drop</span>
+              </div>
+              
+              <button 
+                onClick={onEnd} 
+                className="h-20 w-20 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center shadow-[0_0_30px_rgba(220,38,38,0.4)] transition-all hover:scale-110 active:scale-90"
+              >
+                <span className="material-symbols-outlined text-4xl font-black text-white">stop</span>
               </button>
             </div>
           </div>
 
-          {/* Bullet Time Logic Overlay */}
+          {/* Decision Node / Bullet Time Overlay */}
           {uiState.isBulletTime && uiState.prompt && (
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl text-center z-50">
-              <div className="bg-indigo-900/90 backdrop-blur-lg border-2 border-indigo-400 rounded-2xl p-8 shadow-2xl text-white">
-                <h2 className="text-indigo-300 text-sm font-black tracking-widest uppercase mb-4 animate-pulse">⚠️ Clinical Query ⚠️</h2>
-                <p className="text-2xl md:text-3xl font-medium">{uiState.prompt}</p>
+            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 z-50 pointer-events-none">
+              <div className="bg-indigo-900/90 backdrop-blur-xl border-2 border-indigo-400/50 rounded-3xl p-10 text-center shadow-[0_0_60px_rgba(79,70,229,0.4)] animate-in fade-in zoom-in duration-500">
+                <h2 className="text-indigo-300 text-xs font-black tracking-[0.4em] uppercase mb-6 animate-pulse">Clinical Challenge Detected</h2>
+                <p className="text-3xl md:text-4xl font-bold leading-tight text-white">{uiState.prompt}</p>
+                <div className="mt-8 flex justify-center gap-2">
+                  <div className="h-1 w-12 bg-indigo-500 rounded-full"></div>
+                  <div className="h-1 w-12 bg-indigo-500/30 rounded-full"></div>
+                  <div className="h-1 w-12 bg-indigo-500/30 rounded-full"></div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Feedback Toast */}
+          {uiState.feedback && (
+            <div className="absolute bottom-40 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+              <div className={`px-8 py-4 rounded-full border-2 backdrop-blur-md shadow-2xl animate-in slide-in-from-bottom-10 ${uiState.feedback.isCorrect ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-red-500/20 border-red-500 text-red-400'}`}>
+                <span className="font-black uppercase tracking-widest text-lg italic">{uiState.feedback.text}</span>
               </div>
             </div>
           )}
@@ -665,4 +709,3 @@ return (
       )}
     </div>
   );
-}
