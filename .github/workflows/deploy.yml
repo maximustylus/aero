@@ -16,12 +16,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Authenticate to Google Cloud
-        id: auth
+        id: auth # 1. Added this ID to reference it later
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: 'projects/1031321304123/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
           service_account: 'github-actions-deploy@smart-aero.iam.gserviceaccount.com'
-          create_credentials_file: true
+          create_credentials_file: true # 2. Added this to generate a temporary key file
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
@@ -30,4 +30,5 @@ jobs:
           projectId: smart-aero
           channelId: live
         env:
+          # 3. Added this to tell Firebase to use the temporary credentials
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
