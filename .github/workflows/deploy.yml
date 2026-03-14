@@ -21,16 +21,9 @@ jobs:
         with:
           workload_identity_provider: 'projects/1031321304123/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
           service_account: 'github-actions-deploy@smart-aero.iam.gserviceaccount.com'
-          create_credentials_file: true
+
+      - name: Set up Firebase CLI
+        run: npm install -g firebase-tools
 
       - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          projectId: smart-aero
-          channelId: live
-          # This dummy value bypasses the 'Input required' error
-          firebaseServiceAccount: "WIF_AUTHENTICATED" 
-        env:
-          # This is the actual key that allows Firebase to talk to Google
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+        run: firebase deploy --only hosting --project smart-aero
