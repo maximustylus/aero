@@ -4,8 +4,8 @@
  */
 
 import React, { useState } from 'react';
-import { LandingScreen, PersonaScreen, ModeSelectionScreen, CalibrationScreen, SummaryScreen } from './Screens';
-import CPETGame3D from './components/CPETGame3D';
+import { LandingScreen, PersonaScreen, ModeSelectionScreen, CalibrationScreen, SummaryScreen } from './Screen';
+import CPETGame3D from './component/CPETGame3D';
 
 export type ScreenState = 'landing' | 'persona' | 'mode' | 'calibration' | 'game' | 'summary';
 
