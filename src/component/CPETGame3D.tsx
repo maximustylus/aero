@@ -587,164 +587,80 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
     // a ref to the scene. Let's do a quick DOM transition for the HUD.
   }, [isDarkMode]);
 
-  if (uiState.isLoading) {
-    return (
-      <div className="w-full h-screen flex items-center justify-center bg-background-dark text-white font-display">
-        <div className="flex flex-col items-center gap-4">
-          <span className="material-symbols-outlined text-6xl text-primary animate-spin">sync</span>
-          <h2 className="text-2xl font-bold tracking-widest uppercase">Loading Assets</h2>
-          <div className="w-64 h-2 bg-surface-border rounded-full overflow-hidden">
-            <div className="h-full bg-primary transition-all duration-300" style={{ width: `${uiState.loadProgress}%` }}></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
+return (
     <div className={`relative w-full h-screen overflow-hidden touch-none font-display transition-colors duration-500 ${isDarkMode ? 'bg-background-dark text-white' : 'bg-background-light text-slate-900'}`}>
-      {/* Three.js Canvas Container */}
+      
+      {/* 3D Container: Always rendered to prevent crashing */}
       <div ref={mountRef} className="absolute inset-0" />
 
-      {/* High-Fidelity HUD Overlay */}
-      <div className="absolute inset-0 z-10 flex flex-col h-full p-4 md:p-8 justify-between pointer-events-none">
-        
-        {/* TOP BAR: Header & Stats HUD */}
-        <div className="flex flex-col xl:flex-row gap-4 w-full items-start xl:items-center justify-between pointer-events-auto">
-          {/* Game Title / Back */}
-          <div className={`glass-panel px-5 py-3 rounded-full flex items-center gap-3 shadow-lg ${!isDarkMode && 'bg-white/80 border-slate-200 text-slate-900'}`}>
-            <button onClick={onEnd} className="flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity">
-              <span className="material-symbols-outlined text-2xl">arrow_back</span>
-            </button>
-            <div className={`h-6 w-px ${isDarkMode ? 'bg-white/20' : 'bg-slate-300'}`}></div>
-            <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-widest text-primary font-bold">Protocol</span>
-              <h1 className="text-lg font-bold leading-none tracking-tight">Running (Treadmill)</h1>
+      {/* Loading Screen: Hovers over the game until Three.js is ready */}
+      {uiState.isLoading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900 text-white">
+          <div className="flex flex-col items-center gap-4">
+            <span className="material-symbols-outlined text-6xl text-blue-500 animate-spin">sync</span>
+            <h2 className="text-2xl font-bold tracking-widest uppercase">Loading Assets</h2>
+            <div className="w-64 h-2 bg-slate-700 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${uiState.loadProgress}%` }}></div>
             </div>
-          </div>
-
-          {/* Central HUD Stats Dock */}
-          <div className={`glass-panel px-6 py-3 rounded-full flex items-center gap-8 shadow-2xl box-glow mx-auto xl:absolute xl:left-1/2 xl:-translate-x-1/2 xl:top-8 ${!isDarkMode && 'bg-white/90 border-slate-200 text-slate-900'}`}>
-            <div className="flex flex-col items-center min-w-[80px]">
-              <div className="flex items-center gap-1 mb-1">
-                <span className="material-symbols-outlined text-yellow-500 text-[18px]">stars</span>
-                <span className="text-xs font-medium opacity-60 tracking-wider">SCORE</span>
-              </div>
-              <span className="text-3xl font-bold tabular-nums leading-none">{uiState.score}</span>
-            </div>
-            
-            <div className={`h-10 w-px ${isDarkMode ? 'bg-white/10' : 'bg-slate-200'}`}></div>
-            
-            <div className="flex flex-col items-center min-w-[80px]">
-              <div className="flex items-center gap-1 mb-1">
-                <span className="material-symbols-outlined text-red-500 text-[18px] animate-pulse">favorite</span>
-                <span className="text-xs font-medium opacity-60 tracking-wider">HR</span>
-              </div>
-              <span className="text-3xl font-bold tabular-nums leading-none">148</span>
-              <span className="text-[10px] opacity-40">bpm</span>
-            </div>
-            
-            <div className={`h-10 w-px ${isDarkMode ? 'bg-white/10' : 'bg-slate-200'}`}></div>
-            
-            <div className="flex flex-col items-center min-w-[100px] relative">
-              <div className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary animate-ping"></div>
-              <div className="flex items-center gap-1 mb-1">
-                <span className="material-symbols-outlined text-primary text-[18px]">vital_signs</span>
-                <span className="text-xs font-bold text-primary tracking-wider">VO₂</span>
-              </div>
-              <span className={`text-3xl font-bold tabular-nums leading-none ${isDarkMode ? 'text-glow text-white' : 'text-primary'}`}>32.1</span>
-              <span className="text-[10px] opacity-40">ml/kg/min</span>
-            </div>
-          </div>
-
-          {/* Right Side: User/Settings */}
-          <div className="flex gap-3">
-            <button onClick={toggleTheme} className={`glass-panel h-12 w-12 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors pointer-events-auto ${!isDarkMode && 'bg-white/80 border-slate-200 text-slate-900'}`} title="Toggle Theme">
-              <span className="material-symbols-outlined">{isDarkMode ? 'light_mode' : 'dark_mode'}</span>
-            </button>
-            <div className={`glass-panel pl-2 pr-4 py-1.5 rounded-full flex items-center gap-3 pointer-events-auto ${!isDarkMode && 'bg-white/80 border-slate-200 text-slate-900'}`}>
-              <div className="h-9 w-9 rounded-full bg-cover bg-center border border-primary/50" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuB099x1pyXaygR5AvMoFtyfvMQqpMcJGqj6_cLmkaQjYiDiFX4isigPH7ZsI5r-7OwKohWlVtOVrBqGjQ6hCj6EnouPigF94YsNOXo7z0R_kQSz9O0x-Ypo8sIfallTmHkkfoVHpdvb7wGCOLKwieI3406Q28qC_szpNe7ZiXenZYrGgyAksbyWZEKQDmYEaFPNOIdKQ50cg1J2aXmCKPJfyTt_pO-tEwGZqq6emA225XqQ1hrou3RM_DBkZKyZ_vbHXNSsjcsrEu0')" }}></div>
-              <div className="flex flex-col">
-                <span className="text-xs font-bold">Player 1</span>
-                <span className="text-[10px] opacity-60">Level 5</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* MIDDLE AREA: Game Feedback & Side Meters */}
-        <div className="flex-1 flex w-full relative">
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col items-center gap-4 pointer-events-auto">
-            <div className={`glass-panel p-2 rounded-full flex flex-col items-center gap-3 h-[300px] w-[60px] justify-end relative overflow-hidden ${!isDarkMode && 'bg-white/80 border-slate-200'}`}>
-              <div className="absolute top-4 w-full text-center z-10">
-                <span className="material-symbols-outlined text-red-500 text-xl animate-pulse">warning</span>
-              </div>
-              <div className={`w-2 h-full rounded-full overflow-hidden relative flex items-end group ${isDarkMode ? 'bg-white/10' : 'bg-slate-200'}`}>
-                <div className="w-full acidosis-gradient rounded-full relative" style={{ height: '65%' }}>
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-white shadow-[0_0_10px_white]"></div>
-                </div>
-              </div>
-              <span className="material-symbols-outlined opacity-50 text-xl">water_drop</span>
-            </div>
-          </div>
-        </div>
-
-        {/* BOTTOM BAR: Protocol Controls */}
-        <div className="flex flex-col xl:flex-row gap-6 w-full items-end xl:items-center justify-between pointer-events-auto pb-4">
-          <div className={`glass-panel p-1 rounded-[2rem] flex flex-col sm:flex-row gap-1 shadow-xl ${!isDarkMode && 'bg-white/80 border-slate-200'}`}>
-            <div className="bg-primary/10 border border-primary/30 rounded-[1.7rem] px-6 py-4 flex flex-col justify-center min-w-[160px]">
-              <span className="text-primary text-xs font-bold uppercase tracking-wider mb-1">Current Stage</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold">2</span>
-                <span className="text-sm font-medium opacity-60">/ 3</span>
-              </div>
-              <span className="text-sm font-medium mt-1">Aerobic Zone</span>
-            </div>
-          </div>
-
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 hidden md:flex items-center gap-4">
-            <button className={`h-14 w-14 rounded-full glass-panel flex items-center justify-center transition-all hover:scale-110 active:scale-95 group ${!isDarkMode && 'bg-white/90 border-slate-200 text-slate-900'}`}>
-              <span className="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">pause</span>
-            </button>
-            <button onClick={onEnd} className="h-20 w-20 rounded-full bg-red-600 hover:bg-red-500 shadow-[0_0_30px_rgba(220,38,38,0.4)] flex items-center justify-center transition-all hover:scale-105 active:scale-95 text-white">
-              <span className="material-symbols-outlined text-4xl font-bold">stop</span>
-            </button>
-            <button className={`h-14 w-14 rounded-full glass-panel flex items-center justify-center transition-all hover:scale-110 active:scale-95 group ${!isDarkMode && 'bg-white/90 border-slate-200 text-slate-900'}`}>
-              <span className="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">skip_next</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Bullet Time / Decision Portal Overlay */}
-      {uiState.isBulletTime && uiState.prompt && (
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl pointer-events-none z-50">
-          <div className="bg-indigo-900/90 backdrop-blur-lg border-2 border-indigo-400 rounded-2xl p-8 shadow-[0_0_50px_rgba(99,102,241,0.5)] text-center transform animate-in fade-in zoom-in duration-500 text-white">
-            <h2 className="text-indigo-300 text-sm font-black tracking-[0.2em] uppercase mb-4 animate-pulse">
-              ⚠️ Clinical Query ⚠️
-            </h2>
-            <p className="text-2xl md:text-3xl font-medium leading-relaxed">
-              {uiState.prompt}
-            </p>
-            <p className="text-indigo-200 mt-6 text-sm uppercase tracking-widest">
-              Steer into the correct portal!
-            </p>
           </div>
         </div>
       )}
 
-      {/* Feedback Overlay */}
-      {uiState.feedback && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
-          <div className={`backdrop-blur-lg border-2 rounded-2xl p-6 shadow-2xl text-center transform animate-in fade-in zoom-in duration-300 text-white ${
-            uiState.feedback.isCorrect 
-              ? 'bg-emerald-900/90 border-emerald-400 shadow-[0_0_50px_rgba(52,211,153,0.5)]' 
-              : 'bg-red-900/90 border-red-400 shadow-[0_0_50px_rgba(248,113,113,0.5)]'
-          }`}>
-            <h2 className="text-2xl font-black tracking-wider uppercase">
-              {uiState.feedback.text}
-            </h2>
+      {/* Game HUD: Only appears once loading is false */}
+      {!uiState.isLoading && (
+        <div className="absolute inset-0 z-10 flex flex-col h-full p-4 md:p-8 justify-between pointer-events-none">
+          
+          {/* Top Bar Stats */}
+          <div className="flex flex-col xl:flex-row gap-4 w-full items-start xl:items-center justify-between pointer-events-auto">
+            <div className="glass-panel px-5 py-3 rounded-full flex items-center gap-3 shadow-lg">
+              <button onClick={onEnd} className="opacity-70 hover:opacity-100">
+                <span className="material-symbols-outlined text-2xl">arrow_back</span>
+              </button>
+              <div className="flex flex-col">
+                <span className="text-[10px] uppercase tracking-widest text-blue-400 font-bold">Protocol</span>
+                <h1 className="text-lg font-bold leading-none">Running (Treadmill)</h1>
+              </div>
+            </div>
+
+            <div className="glass-panel px-6 py-3 rounded-full flex items-center gap-8 shadow-2xl box-glow">
+              <div className="flex flex-col items-center min-w-[80px]">
+                <span className="text-xs font-medium opacity-60">SCORE</span>
+                <span className="text-3xl font-bold tabular-nums">{uiState.score}</span>
+              </div>
+              <div className="flex flex-col items-center min-w-[80px]">
+                <span className="text-xs font-medium opacity-60">HR</span>
+                <span className="text-3xl font-bold text-red-500">148</span>
+              </div>
+              <div className="flex flex-col items-center min-w-[100px]">
+                <span className="text-xs font-bold text-blue-400">VO₂</span>
+                <span className="text-3xl font-bold">32.1</span>
+              </div>
+            </div>
           </div>
+
+          {/* Bottom Controls */}
+          <div className="flex w-full items-end justify-between pointer-events-auto pb-4">
+            <div className="glass-panel p-4 rounded-2xl flex flex-col min-w-[160px]">
+              <span className="text-blue-400 text-xs font-bold uppercase mb-1">Current Stage</span>
+              <span className="text-3xl font-bold">2 <span className="text-sm opacity-50">/ 3</span></span>
+            </div>
+
+            <div className="flex items-center gap-4">
+               <button onClick={onEnd} className="h-20 w-20 rounded-full bg-red-600 shadow-lg flex items-center justify-center text-white">
+                <span className="material-symbols-outlined text-4xl font-bold">stop</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Bullet Time Logic Overlay */}
+          {uiState.isBulletTime && uiState.prompt && (
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl text-center z-50">
+              <div className="bg-indigo-900/90 backdrop-blur-lg border-2 border-indigo-400 rounded-2xl p-8 shadow-2xl text-white">
+                <h2 className="text-indigo-300 text-sm font-black tracking-widest uppercase mb-4 animate-pulse">⚠️ Clinical Query ⚠️</h2>
+                <p className="text-2xl md:text-3xl font-medium">{uiState.prompt}</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
