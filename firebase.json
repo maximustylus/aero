@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "smart-aero",
     "public": "public",
     "ignore": [
       "firebase.json",
