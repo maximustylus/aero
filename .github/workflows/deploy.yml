@@ -19,16 +19,18 @@ jobs:
         id: auth
         uses: google-github-actions/auth@v2
         with:
+          # Use your exact Project Number and Service Account
           workload_identity_provider: 'projects/1031321304123/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
           service_account: 'github-actions-deploy@smart-aero.iam.gserviceaccount.com'
-          # This creates the virtual key file the CLI needs
+          # CRITICAL: This creates the virtual key for the CLI
           create_credentials_file: true 
 
       - name: Set up Firebase CLI
         run: npm install -g firebase-tools
 
       - name: Deploy to Firebase Hosting
-        run: firebase deploy --only hosting --project smart-aero
+        # We add the --non-interactive flag for CI/CD environments
+        run: firebase deploy --only hosting --project smart-aero --non-interactive
         env:
-          # This tells the CLI where to find the virtual key
+          # This tells the Firebase CLI where to find the 'handshake' result
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
