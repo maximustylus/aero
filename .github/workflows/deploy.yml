@@ -31,6 +31,11 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
 
+      - name: Create Hosting Site
+        run: firebase hosting:sites:create smart-aero || true
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+
       - name: Deploy AERO
         run: firebase deploy --only hosting:smart-aero --project smart-aero --non-interactive
         env:
