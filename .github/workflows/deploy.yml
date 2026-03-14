@@ -2,7 +2,11 @@ name: Deploy SmartAeroSim to Firebase
 on:
   push:
     branches:
-      - main # Triggers on push to main branch
+      - main
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   build_and_deploy:
@@ -11,21 +15,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          node-size: 20
-
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Build Tailwind & Assets
-        run: npm run build # This assumes you have a build script in package.json
+          workload_identity_provider: 'projects/1031321304123/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'github-actions-deploy@smart-aero.iam.gserviceaccount.com'
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_SMARTAEROSIM }}'
-          projectId: smartaerosim
+          projectId: smart-aero
           channelId: live
