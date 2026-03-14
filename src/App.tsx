@@ -13,7 +13,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background-dark text-white font-display">
-      {currentScreen === 'landing' && <LandingScreen onNext={() => setCurrentScreen('persona')} />}
+      {currentScreen === 'landing' && (
+        <LandingScreen onNext={() => setCurrentScreen('persona')} />
+      )}
       
       {currentScreen === 'persona' && (
         <PersonaScreen 
@@ -29,7 +31,9 @@ export default function App() {
         />
       )}
       
-      {currentScreen === 'calibration' && <CalibrationScreen onNext={() => setCurrentScreen('game')} />}
+      {currentScreen === 'calibration' && (
+        <CalibrationScreen onNext={() => setCurrentScreen('game')} />
+      )}
       
       {currentScreen === 'game' && (
         <CPETGame3D 
@@ -39,7 +43,9 @@ export default function App() {
         />
       )}
       
-      {currentScreen === 'summary' && <SummaryScreen onRestart={() => setCurrentScreen('landing')} />}
+      {currentScreen === 'summary' && (
+        <SummaryScreen onRestart={() => setCurrentScreen('landing')} />
+      )}
     </div>
   );
 }
