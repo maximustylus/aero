@@ -19,8 +19,8 @@ jobs:
         id: auth
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: 'projects/1031321304123/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
-          service_account: 'github-actions-deploy@smart-aero.iam.gserviceaccount.com'
+          workload_identity_provider: 'projects/120470061014/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'github-actions-deploy@smartaerosim.iam.gserviceaccount.com'
           create_credentials_file: true
 
       - name: Set up Node.js
@@ -33,7 +33,7 @@ jobs:
           npm install
           npm run build
 
-      - name: Deploy AERO
-        run: npx firebase-tools deploy --only hosting --project smartaero --non-interactive
+      - name: Deploy AERO to smartaero.web.app
+        run: npx firebase-tools deploy --only hosting:smartaero --project smartaerosim --non-interactive
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
