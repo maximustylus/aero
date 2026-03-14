@@ -21,9 +21,14 @@ jobs:
         with:
           workload_identity_provider: 'projects/1031321304123/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
           service_account: 'github-actions-deploy@smart-aero.iam.gserviceaccount.com'
+          # This creates the virtual key file the CLI needs
+          create_credentials_file: true 
 
       - name: Set up Firebase CLI
         run: npm install -g firebase-tools
 
       - name: Deploy to Firebase Hosting
         run: firebase deploy --only hosting --project smart-aero
+        env:
+          # This tells the CLI where to find the virtual key
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
