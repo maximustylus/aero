@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "smartaero",
+    "target": "smartaero",
     "public": "dist",
     "ignore": [
       "firebase.json",

@@ -49,7 +49,7 @@ export function LandingScreen({ onNext, onPlayMaxFun }: { onNext: () => void; on
   );
 }
 
-export function PersonaScreen({ onNext }: { onNext: () => void }) {
+export function PersonaScreen({ onSelectLearner, onSelectPatient }: { onSelectLearner: () => void, onSelectPatient: () => void }) {
   return (
     <div className="relative flex flex-grow flex-col min-h-screen bg-background-dark text-white font-display">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -63,7 +63,7 @@ export function PersonaScreen({ onNext }: { onNext: () => void }) {
             <p className="text-[#9ca6ba] text-lg max-w-2xl">Choose your path to begin the CPET experience. This choice customizes the language and complexity.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-            <button onClick={onNext} className="persona-card group relative flex flex-col gap-6 p-6 md:p-8 rounded-xl border-2 border-[#282e39] bg-[#1a202c] text-left transition-all duration-300 hover:border-primary hover:shadow-[0_0_20px_rgba(13,89,242,0.4)] hover:-translate-y-1">
+            <button onClick={onSelectLearner} className="persona-card group relative flex flex-col gap-6 p-6 md:p-8 rounded-xl border-2 border-[#282e39] bg-[#1a202c] text-left transition-all duration-300 hover:border-primary hover:shadow-[0_0_20px_rgba(13,89,242,0.4)] hover:-translate-y-1">
               <div className="w-full aspect-video md:aspect-[4/3] rounded-lg bg-cover bg-center overflow-hidden relative shadow-lg">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10"></div>
                 <div className="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuC9ANcTQmlF9ehxY6dENH0T2RxqMzVE_Md4ki5HtHYWZfPhfqPKNgraI4ctM-xTlasTonS1IIc51R7OYRQUpgmX9P2G3D3EtZtsGAHoan0RFxyT2bdHIW96TcfV_J6s2XnokQSO0FkGA0poIdnnx2LhlYqKDoiXk2CuChy7CvB1W0ruZi8VRQuQl4VJ4QlKZCpic12Ox-u4gsrSnuedwbaKcL6DEEUzfegYM5q78QlKjOTyxcDEBat8ntZ-NC5x4ZHdTr6u6QqlXbw')" }}></div>
@@ -79,7 +79,7 @@ export function PersonaScreen({ onNext }: { onNext: () => void }) {
                 <p className="text-[#9ca6ba] text-base leading-relaxed">Explore CPET protocols with full clinical terminology, physiological data breakdowns, and interpretation challenges.</p>
               </div>
             </button>
-            <button onClick={onNext} className="persona-card group relative flex flex-col gap-6 p-6 md:p-8 rounded-xl border-2 border-[#282e39] bg-[#1a202c] text-left transition-all duration-300 hover:border-emerald-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:-translate-y-1">
+            <button onClick={onSelectPatient} className="persona-card group relative flex flex-col gap-6 p-6 md:p-8 rounded-xl border-2 border-[#282e39] bg-[#1a202c] text-left transition-all duration-300 hover:border-emerald-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:-translate-y-1">
               <div className="w-full aspect-video md:aspect-[4/3] rounded-lg bg-cover bg-center overflow-hidden relative shadow-lg">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10"></div>
                 <div className="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAacSpJvH2Vusg2mcHyXG69KYQOIKfiP_5Cer6AgBu3jvhYclntBzvIMGm1-V6Z0UpTFqpXHPGUcI0kOLzuCceW3qU5w2wErQKvtmc4BDbzXkwPBE_jxzvvNo6sS0spzLCbxWKOxt-DgQ2Oo4AaGe82Ou7oJjIGKsJ58dP0l_D4waXy6bUFlZe3BVRJeHmxmgEANULW-Z45EMgb5xTKRa6c4l65F3G6Z8n3IEEUv5LlWSKIYOh0zYbQXOyN_lrngnb4nCeIIlk8Ek8')" }}></div>
@@ -102,7 +102,7 @@ export function PersonaScreen({ onNext }: { onNext: () => void }) {
   );
 }
 
-export function ModeSelectionScreen({ onNext }: { onNext: () => void }) {
+export function ModeSelectionScreen({ onSelectRunning, onSelectCycling }: { onSelectRunning: () => void, onSelectCycling: () => void }) {
   return (
     <div className="relative min-h-screen flex flex-col w-full overflow-hidden bg-surface-dark text-white font-display">
       <div className="fixed inset-0 w-full h-full pointer-events-none z-0">
@@ -117,7 +117,7 @@ export function ModeSelectionScreen({ onNext }: { onNext: () => void }) {
           <p className="text-indigo-200/80 font-bold tracking-[0.2em] uppercase text-sm md:text-base">Choose your CPET integration path</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 w-full max-w-5xl px-2">
-          <div onClick={onNext} className="group relative cursor-pointer">
+          <div onClick={onSelectRunning} className="group relative cursor-pointer">
             <div className="absolute -inset-1 bg-gradient-to-b from-cyan-500 to-blue-600 rounded-2xl blur opacity-25 group-hover:opacity-100 transition duration-500"></div>
             <div className="relative h-full bg-slate-900/90 backdrop-blur-xl border border-white/10 group-hover:border-cyan-400/50 rounded-2xl p-8 lg:p-12 flex flex-col items-center justify-center gap-8 overflow-hidden transition-all duration-300 transform group-hover:-translate-y-2">
               <div className="relative z-10 w-32 h-32 flex items-center justify-center rounded-full bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border border-cyan-400/20 group-hover:border-cyan-400/60 group-hover:scale-105 transition-all duration-300">
@@ -132,7 +132,7 @@ export function ModeSelectionScreen({ onNext }: { onNext: () => void }) {
               </button>
             </div>
           </div>
-          <div onClick={onNext} className="group relative cursor-pointer">
+          <div onClick={onSelectCycling} className="group relative cursor-pointer">
             <div className="absolute -inset-1 bg-gradient-to-b from-pink-500 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-100 transition duration-500"></div>
             <div className="relative h-full bg-slate-900/90 backdrop-blur-xl border border-white/10 group-hover:border-pink-400/50 rounded-2xl p-8 lg:p-12 flex flex-col items-center justify-center gap-8 overflow-hidden transition-all duration-300 transform group-hover:-translate-y-2">
               <div className="relative z-10 w-32 h-32 flex items-center justify-center rounded-full bg-gradient-to-br from-pink-500/10 to-purple-600/10 border border-pink-400/20 group-hover:border-pink-400/60 group-hover:scale-105 transition-all duration-300">

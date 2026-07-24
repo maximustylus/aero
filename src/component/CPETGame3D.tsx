@@ -3,7 +3,9 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import gsap from 'gsap';
+import { ClinicalDecisionNodes, PaediatricDecisionNodes } from '../data/questionBanks';
 
 // --- Constants & Types ---
 const LANES = [-3, 0, 3];
@@ -115,7 +117,13 @@ interface GameState {
   feedback: { text: string; isCorrect: boolean } | null;
 }
 
-export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
+interface CPETGame3DProps {
+  persona?: 'learner' | 'patient';
+  protocol?: 'running' | 'cycling';
+  onEnd?: () => void;
+}
+
+export default function CPETGame3D({ persona = 'learner', protocol = 'running', onEnd }: CPETGame3DProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [uiState, setUiState] = useState<GameState>({
@@ -244,10 +252,11 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
     scene.add(gridHelper);
 
     // --- Assets & Entities ---
-    // Runner (Physiologist Avatar)
+    // Runner (Physiologist Avatar) — capsule is the physics anchor and the
+    // visual fallback until the GLB character/equipment models load
     const runnerGeo = new THREE.CapsuleGeometry(0.4, 1, 4, 16);
-    const runnerMat = new THREE.MeshStandardMaterial({ 
-      color: 0x0ea5e9, 
+    const runnerMat = new THREE.MeshStandardMaterial({
+      color: 0x0ea5e9,
       emissive: isDarkMode ? 0x0284c7 : 0x000000,
       emissiveIntensity: 0.5,
       roughness: 0.2,
@@ -257,6 +266,63 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
     runner.position.set(0, 1, 0);
     runner.castShadow = true;
     scene.add(runner);
+
+    // GLB models: character + protocol equipment, attached to the runner anchor.
+    // On success the capsule turns invisible (not removed — physics, slide
+    // scaling, and the stumble flash still target it). On failure the capsule
+    // remains as the visible avatar.
+    let mixer: THREE.AnimationMixer | null = null;
+    const loadedModelRoots: THREE.Object3D[] = [];
+    const gltfLoader = new GLTFLoader();
+    const loadModel = (path: string) =>
+      new Promise<{ scene: THREE.Group; animations: THREE.AnimationClip[] }>((resolve, reject) =>
+        gltfLoader.load(path, resolve, undefined, reject));
+
+    // Normalize a GLB to game units regardless of authoring scale: uniform-scale
+    // to targetHeight, centre on the anchor's x/z, rest its base at baseY
+    // (runner local space: capsule centre = 0, capsule bottom ≈ -0.9).
+    const fitModel = (root: THREE.Object3D, targetHeight: number, baseY: number) => {
+      const box = new THREE.Box3().setFromObject(root);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const s = targetHeight / Math.max(size.y, 1e-3);
+      root.scale.setScalar(s);
+      const fitted = new THREE.Box3().setFromObject(root);
+      const centre = new THREE.Vector3();
+      fitted.getCenter(centre);
+      root.position.x -= centre.x;
+      root.position.z -= centre.z;
+      root.position.y -= fitted.min.y - baseY;
+    };
+
+    (async () => {
+      try {
+        const charGltf = await loadModel('/models/character.glb');
+        const characterModel = charGltf.scene;
+        characterModel.rotation.y = Math.PI; // back view — face down the track
+        fitModel(characterModel, 1.8, -0.9);
+        if (charGltf.animations.length > 0) {
+          mixer = new THREE.AnimationMixer(characterModel);
+          mixer.clipAction(charGltf.animations[0]).play();
+        }
+
+        const equipPath = protocol === 'cycling' ? '/models/bike.glb' : '/models/treadmill.glb';
+        const equipGltf = await loadModel(equipPath);
+        const equipmentModel = equipGltf.scene;
+        equipmentModel.rotation.y = Math.PI;
+        fitModel(equipmentModel, 1.3, -1.0);
+
+        runner.add(equipmentModel);
+        runner.add(characterModel);
+        loadedModelRoots.push(equipmentModel, characterModel);
+        runner.traverse(child => {
+          if ((child as THREE.Mesh).isMesh) child.castShadow = true;
+        });
+        runnerMat.visible = false; // hide capsule, keep it as physics anchor
+      } catch (error) {
+        console.warn('GLB assets unavailable — using capsule avatar.', error);
+      }
+    })();
 
     // Materials
     const matVO2 = new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: isDarkMode ? 0x2563eb : 0x000000, emissiveIntensity: 1 });
@@ -342,20 +408,29 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
         ctx.fillStyle = isDarkRef.current ? '#9333ea' : '#0d59f2';
         ctx.fillRect(0, 0, 256, 128);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 40px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(text, 128, 64);
+        // Question-bank options can be long — wrap onto two lines
+        const words = text.split(' ');
+        if (words.length > 2) {
+          ctx.font = 'bold 28px sans-serif';
+          const mid = Math.ceil(words.length / 2);
+          ctx.fillText(words.slice(0, mid).join(' '), 128, 46);
+          ctx.fillText(words.slice(mid).join(' '), 128, 82);
+        } else {
+          ctx.font = 'bold 40px sans-serif';
+          ctx.fillText(text, 128, 64);
+        }
       }
       return new THREE.CanvasTexture(canvas);
     };
 
-    const spawnObject = (zPos: number, isPortalRow = false) => {
+    const spawnObject = (zPos: number, isPortalRow = false, portalOptions: string[] = []) => {
       if (isPortalRow) {
-        const options = ['Cardiac', 'Pulmonary', 'Metabolic'];
+        const options = [...portalOptions];
         options.sort(() => Math.random() - 0.5);
-        
-        for (let i = 0; i < 3; i++) {
+
+        for (let i = 0; i < Math.min(3, options.length); i++) {
           const portalGroup = new THREE.Group();
           portalGroup.position.set(LANES[i], 1.5, zPos);
 
@@ -418,10 +493,14 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
     const triggerDecisionNode = () => {
       gameState.current.isBulletTime = true;
       gameState.current.timeScale = 0.2; // Bullet Time
-      gameState.current.currentPrompt = "If O2 Pulse flattens early but VE reserve is high, what system is limiting?";
-      gameState.current.correctAnswer = "Cardiac";
-      
-      spawnObject(-60, true);
+
+      // Persona-specific question bank: clinical for learners, paediatric for patients
+      const activeBank = persona === 'learner' ? ClinicalDecisionNodes : PaediatricDecisionNodes;
+      const node = activeBank[Math.floor(Math.random() * activeBank.length)];
+      gameState.current.currentPrompt = node.prompt;
+      gameState.current.correctAnswer = node.correctAnswer;
+
+      spawnObject(-60, true, node.options);
 
       setUiState(prev => ({
         ...prev,
@@ -472,6 +551,9 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
       const delta = Math.min(clock.getDelta(), 0.1);
       const dt60 = delta * 60;
       const state = gameState.current;
+
+      // Character animation follows world speed (slows during bullet time)
+      if (mixer) mixer.update(delta * state.timeScale * (state.speed / RUN_SPEED));
 
       if (state.score !== lastUiScore) {
         lastUiScore = state.score;
@@ -628,6 +710,18 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
       gridHelper.material.dispose();
       runnerGeo.dispose();
       [runnerMat, matVO2, matHR, matVCO2, matObstacle, matCloud, matPortal].forEach(m => m.dispose());
+      // Loaded GLB assets
+      if (mixer) mixer.stopAllAction();
+      loadedModelRoots.forEach(root => {
+        root.traverse(child => {
+          const mesh = child as THREE.Mesh;
+          if (mesh.isMesh) {
+            mesh.geometry?.dispose();
+            const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+            mats.forEach(m => m?.dispose());
+          }
+        });
+      });
       composer.dispose();
       renderer.dispose();
       themeRef.current = null;
@@ -669,7 +763,12 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
             <div className={`h-6 w-px ${isDarkMode ? 'bg-white/20' : 'bg-slate-300'}`}></div>
             <div className="flex flex-col">
               <span className="text-[10px] uppercase tracking-widest text-primary font-bold">Protocol</span>
-              <h1 className="text-lg font-bold leading-none tracking-tight">Running (Treadmill)</h1>
+              <h1 className="text-lg font-bold leading-none tracking-tight">
+                {protocol === 'cycling' ? 'Cycling (Ergometer)' : 'Running (Treadmill)'}
+              </h1>
+            </div>
+            <div className={`hidden md:flex text-[10px] font-bold uppercase tracking-widest py-1 px-3 rounded-full ${isDarkMode ? 'bg-white/5 text-white/70' : 'bg-slate-200 text-slate-600'}`}>
+              {persona === 'learner' ? 'Clinical' : 'Patient'}
             </div>
           </div>
 

@@ -20,9 +20,9 @@ Collect physiological orbs (VO₂, VCO₂, HR, VE) by switching lanes. Fill the 
 
 ## 🕹️ 3D Runner (Classic)
 
-The original prototype: steer a runner through token pickups and hazards; at intervals the world drops into bullet time and poses a clinical query answered by steering into a portal. `←/→/↑/↓` or `WASD` + swipes.
+The original concept, revitalized: steer a 3D-modelled runner (GLB character + treadmill/bike equipment) through token pickups and hazards; at intervals the world drops into bullet time and poses a decision question answered by steering into a portal. Questions come from persona-specific banks (`src/data/questionBanks.ts` — clinical nodes for learners, paediatric nodes for patients), and the persona/protocol you pick on the way in changes the game. `←/→/↑/↓` or `WASD` + swipes.
 
-> **Scope note (fail-loud):** the classic runner is demo-grade — one decision question, static HUD vitals, persona/mode selections don't change gameplay, pause/skip are inert. It is kept as the project's 3D showcase; MaxFun is the maintained learning experience. Details in the Roadmap.
+> **Scope note (fail-loud):** the 3D runner still has known gaps — HUD vitals are static placeholders and pause/skip are inert. MaxFun is the deeper learning experience. Details in the Roadmap.
 
 ## 🚀 Technical Stack
 * **Framework**: React 19 + TypeScript, built with Vite 6.
@@ -68,7 +68,7 @@ The original prototype: steer a runner through token pickups and hazards; at int
 - [ANIMATOR_STEWARD.md](ANIMATOR_STEWARD.md) — animation constants, traps, and testing notes
 
 ## 🗺️ Roadmap (not yet implemented)
-* Classic 3D runner: wire persona/mode selections, add more decision questions, live HUD vitals, functional pause/skip, load the `.glb` models (runner is a capsule primitive).
+* Classic 3D runner: live HUD vitals (currently static placeholders), functional pause/skip, more decision nodes per bank.
 * MaxFun: difficulty progression using the existing `Question.difficulty` field, per-category stats, resolve whether the patient bank should have a 20th question.
 * User accounts, progression and session logging.
 

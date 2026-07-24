@@ -1,7 +1,13 @@
 {
   "projects": {
-    "default": "smartaero"
+    "default": "smartaerosim"
   },
-  "targets": {},
+  "targets": {
+    "smartaerosim": {
+      "hosting": {
+        "smartaero": ["smartaero"]
+      }
+    }
+  },
   "etags": {}
 }

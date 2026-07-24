@@ -9,6 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ### Added
 - **MaxFun game** (`src/component/MaxFun.tsx`, `src/constants/cpetQuestions.ts`): Canvas-2D lane-runner/cycling game with real CPET question banks (27 clinician / 19 patient), Pokémon-style encounter pauses, two roles (Patient/Child, Clinician/Student), two exercise modes (treadmill city, cycling park), VO₂ reserve, acidosis mechanic, Web Audio SFX + haptics, per-question analytics, and persistent hi-score.
+- **3D Runner revitalized** (merged from GitHub-side work + the remediated engine): persona and protocol selections are now wired through to the game; decision nodes draw from real question banks (`src/data/questionBanks.ts` — 4 clinical + 4 paediatric nodes, randomised); GLB character/treadmill/bike models load from `public/models/` with capsule fallback and speed-synced animation; HUD shows the chosen protocol and persona.
 - **Keyboard answering** in the encounter card: `1/2/3` or `A/B/C` to select, `Enter` to confirm.
 - **Encounter jingle**: GB-style descending chirps + haptic pattern when a question triggers.
 - **Kahoot-style feedback recap**: the correct tile (green ✓) and a wrong pick (red ✗) are shown above the explanation.
@@ -20,6 +21,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 - Landing/summary rebranded from "CPET RUNNER"/"CPX SIM" to **AERO**, with messaging for the three audiences: patients, healthcare professionals, healthcare students.
 - Orb spawning is now delta-time scaled — encounter pacing is identical at 60 Hz and 120 Hz displays.
 - Dead landing-page buttons (System Check, LOGIN) removed.
+- Deploy pipeline consolidated on the **proven** path: `.github/workflows/firebase-hosting-merge.yml` (service-account secret, Firebase project `smartaerosim`, hosting target/site `smartaero`), now with `npm ci` + typecheck gates. The unverified workload-identity `deploy.yml` was removed; `.firebaserc` carries the target mapping.
+- `.glb` models moved back into the deploy payload (`public/models/`) now that the 3D game actually loads them; the unshipped `assets/models/` copies removed.
 
 ### Fixed
 - Encounter **Confirm double-submit** (fast second tap double-counted score/reserve/analytics) — the pending question is consumed on first submit.

@@ -26,7 +26,7 @@ The version lives in **`package.json`** (single source of truth). Keep the landi
 3. Smoke-test both experiences in a browser: one full MaxFun encounter (answer, feedback, resume) and one classic 3D run reaching a decision node. Check one mobile viewport.
 4. Update `CHANGELOG.md` (rename Unreleased → version + date) and bump `package.json`.
 5. Commit with message `release: vX.Y.Z`, then `git tag vX.Y.Z`.
-6. Push `main` + tags. The GitHub Actions workflow (`.github/workflows/deploy.yml`) lints, builds, and deploys to Firebase Hosting (`smartaero.web.app`).
+6. Push `main` + tags. The GitHub Actions workflow (`.github/workflows/firebase-hosting-merge.yml`) lints, builds, and deploys to Firebase Hosting (`smartaero.web.app`, project `smartaerosim`).
 7. Watch the Actions run to green, then load https://smartaero.web.app/ and confirm the version chip and a hard-refresh (the service worker serves network-first navigations, so new HTML shows on reload).
 
 ## Known version-relevant facts
