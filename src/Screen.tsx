@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export function LandingScreen({ onNext }: { onNext: () => void }) {
+export function LandingScreen({ onNext, onPlayMaxFun }: { onNext: () => void; onPlayMaxFun: () => void }) {
   return (
     <div className="relative min-h-screen flex flex-col w-full overflow-hidden bg-background-dark text-white font-display">
       <div className="absolute inset-0 w-full h-full z-0">
@@ -12,32 +12,36 @@ export function LandingScreen({ onNext }: { onNext: () => void }) {
           <div className="p-2 bg-primary rounded-full shadow-[0_0_15px_rgba(13,89,242,0.5)]">
             <span className="material-symbols-outlined text-white text-xl">monitor_heart</span>
           </div>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight uppercase">CPET Runner</h2>
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight uppercase">AERO</h2>
         </div>
         <div className="flex items-center gap-4">
-          <button className="hidden md:flex text-gray-300 hover:text-white font-medium text-sm uppercase tracking-wider transition-colors">System Check</button>
-          <button className="flex items-center justify-center rounded-full h-10 px-6 bg-white/10 hover:bg-white/20 border border-white/10 text-white text-sm font-bold tracking-wide transition-all backdrop-blur-sm">LOGIN</button>
+          <span className="hidden md:flex text-gray-300 font-medium text-sm uppercase tracking-wider">CPET Education Platform</span>
         </div>
       </header>
       <main className="relative z-10 flex-grow flex flex-col items-center justify-center px-4 py-12 md:py-20 text-center w-full max-w-7xl mx-auto">
         <div className="flex flex-col items-center gap-6 md:gap-8 max-w-4xl animate-fade-in-up">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/40 text-primary-glow text-xs font-bold uppercase tracking-[0.1em] mb-2 shadow-[0_0_10px_rgba(13,89,242,0.2)]">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-            Simulation v2.0 Ready
+            AERO v2.0 · MaxFun Inside
           </div>
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-black leading-[0.9] tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-blue-100 to-blue-400 drop-shadow-2xl">
-            CPX SIM
+            AERO
           </h1>
           <h2 className="text-lg md:text-2xl text-blue-200/80 font-normal max-w-2xl leading-relaxed">
-            The Integration Journey. <br className="hidden md:block"/>Master the physiology of performance in a high-stakes simulation.
+            Learn cardiopulmonary exercise testing by playing it. <br className="hidden md:block"/>
+            For patients, healthcare professionals, and healthcare students.
           </h2>
-          <div className="mt-8 flex flex-col items-center w-full">
-            <button onClick={onNext} className="group relative flex items-center justify-center w-full max-w-[320px] h-16 rounded-full bg-primary hover:bg-blue-600 text-white transition-all shadow-[0_0_40px_rgba(13,89,242,0.4)] hover:shadow-[0_0_60px_rgba(13,89,242,0.6)] hover:scale-105">
+          <div className="mt-8 flex flex-col items-center gap-4 w-full">
+            <button onClick={onPlayMaxFun} className="group relative flex items-center justify-center w-full max-w-[320px] h-16 rounded-full bg-primary hover:bg-blue-600 text-white transition-all shadow-[0_0_40px_rgba(13,89,242,0.4)] hover:shadow-[0_0_60px_rgba(13,89,242,0.6)] hover:scale-105">
               <span className="absolute inset-0 rounded-full border border-white/20"></span>
-              <span className="text-lg font-bold tracking-widest uppercase mr-2">Start Simulation</span>
+              <span className="text-lg font-bold tracking-widest uppercase mr-2">Play MaxFun</span>
               <span className="material-symbols-outlined text-2xl group-hover:translate-x-1 transition-transform">play_arrow</span>
             </button>
-            <p className="mt-4 text-xs text-blue-300/50 uppercase tracking-widest">Press to initialize</p>
+            <button onClick={onNext} className="group flex items-center justify-center w-full max-w-[320px] h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white transition-all">
+              <span className="text-sm font-bold tracking-widest uppercase mr-2">3D Runner (Classic)</span>
+              <span className="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">view_in_ar</span>
+            </button>
+            <p className="mt-2 text-xs text-blue-300/50 uppercase tracking-widest">MaxFun: quiz game with real CPET question banks · Classic: 3D demo run</p>
           </div>
         </div>
       </main>
@@ -227,7 +231,7 @@ export function SummaryScreen({ onRestart }: { onRestart: () => void }) {
       <header className="sticky top-0 z-50 w-full glass-panel border-b border-[#282e39] px-6 py-4">
         <div className="flex items-center gap-4 max-w-7xl mx-auto">
           <span className="material-symbols-outlined text-3xl text-primary">monitor_heart</span>
-          <h2 className="text-xl font-bold">CPET RUNNER</h2>
+          <h2 className="text-xl font-bold">AERO</h2>
         </div>
       </header>
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-8 flex flex-col gap-8 relative">
