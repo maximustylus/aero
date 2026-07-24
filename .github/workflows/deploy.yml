@@ -28,10 +28,14 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Dependencies and Build
-        run: |
-          npm install
-          npm run build
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Typecheck
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
 
       - name: Deploy AERO
         run: npx firebase-tools deploy --only hosting --project smartaero --non-interactive

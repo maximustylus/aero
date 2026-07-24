@@ -99,6 +99,13 @@ class ObjectPool {
   getActive() {
     return this.active;
   }
+
+  disposeAll() {
+    // Geometries are per-mesh; materials are shared and disposed by the owner.
+    [...this.active, ...this.inactive].forEach(m => m.geometry.dispose());
+    this.active.length = 0;
+    this.inactive.length = 0;
+  }
 }
 
 interface GameState {
@@ -106,8 +113,6 @@ interface GameState {
   isBulletTime: boolean;
   prompt: string | null;
   feedback: { text: string; isCorrect: boolean } | null;
-  isLoading: boolean;
-  loadProgress: number;
 }
 
 export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
@@ -118,8 +123,6 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
     isBulletTime: false,
     prompt: null,
     feedback: null,
-    isLoading: true,
-    loadProgress: 0,
   });
 
   // Mutable state for the animation loop
@@ -138,6 +141,15 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
     correctAnswer: null as string | null,
   });
 
+  // Live handles for theme switching without rebuilding the scene
+  const themeRef = useRef<{
+    scene: THREE.Scene;
+    bloomPass: UnrealBloomPass;
+    ambientLight: THREE.AmbientLight;
+    emissives: [THREE.MeshStandardMaterial, number][];
+  } | null>(null);
+  const isDarkRef = useRef(isDarkMode);
+
   // Theme Toggle Handler
   const toggleTheme = () => {
     setIsDarkMode(prev => !prev);
@@ -153,16 +165,11 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
   }, [isDarkMode]);
 
   useEffect(() => {
-    if (!mountRef.current) return;
+    const mount = mountRef.current;
+    if (!mount) return;
 
-    // --- Loading Manager ---
-    const manager = new THREE.LoadingManager();
-    manager.onProgress = (url, itemsLoaded, itemsTotal) => {
-      setUiState(prev => ({ ...prev, loadProgress: (itemsLoaded / itemsTotal) * 100 }));
-    };
-    manager.onLoad = () => {
-      setUiState(prev => ({ ...prev, isLoading: false }));
-    };
+    // Track timers created inside the effect so cleanup can clear them
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
 
     // --- 3. 3D Scene Geometry & Camera ---
     const scene = new THREE.Scene();
@@ -181,7 +188,7 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    mountRef.current.appendChild(renderer.domElement);
+    mount.appendChild(renderer.domElement);
 
     // --- Post-Processing (UnrealBloomPass) ---
     const composer = new EffectComposer(renderer);
@@ -206,7 +213,7 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
     scene.add(dirLight);
 
     // --- Curved World Shader ---
-    const curvedShader = (shader: THREE.Shader) => {
+    const curvedShader = (shader: THREE.WebGLProgramParametersWithUniforms) => {
       shader.vertexShader = shader.vertexShader.replace(
         '#include <begin_vertex>',
         `
@@ -261,6 +268,20 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
 
     [matVO2, matHR, matVCO2, matObstacle, matCloud, matPortal].forEach(m => m.onBeforeCompile = curvedShader);
 
+    // Register theme-sensitive handles (dark-mode emissive hex per material)
+    themeRef.current = {
+      scene,
+      bloomPass,
+      ambientLight,
+      emissives: [
+        [runnerMat, 0x0284c7],
+        [matVO2, 0x2563eb],
+        [matHR, 0xdc2626],
+        [matVCO2, 0x059669],
+        [matPortal, 0x9333ea],
+      ],
+    };
+
     // Object Pools
     const poolVO2 = new ObjectPool(() => {
       const m = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), matVO2);
@@ -299,13 +320,26 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
 
     const activePortals: THREE.Group[] = [];
 
+    const removePortalRow = () => {
+      activePortals.forEach(p => {
+        scene.remove(p);
+        const [torus, label] = p.children as THREE.Mesh[];
+        torus.geometry.dispose();
+        label.geometry.dispose();
+        const labelMat = label.material as THREE.MeshBasicMaterial;
+        labelMat.map?.dispose();
+        labelMat.dispose();
+      });
+      activePortals.length = 0;
+    };
+
     const createTextTexture = (text: string) => {
       const canvas = document.createElement('canvas');
       canvas.width = 256;
       canvas.height = 128;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.fillStyle = isDarkMode ? '#9333ea' : '#0d59f2'; 
+        ctx.fillStyle = isDarkRef.current ? '#9333ea' : '#0d59f2';
         ctx.fillRect(0, 0, 256, 128);
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 40px sans-serif';
@@ -396,8 +430,8 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
       }));
     };
 
-    const resolveDecision = (answer: string) => {
-      const isCorrect = answer === gameState.current.correctAnswer;
+    const resolveDecision = (answer: string | null) => {
+      const isCorrect = answer !== null && answer === gameState.current.correctAnswer;
       gameState.current.isBulletTime = false;
       gameState.current.timeScale = 1.0;
       gameState.current.timeSinceLastPortal = 0;
@@ -417,31 +451,42 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
         isBulletTime: false,
         prompt: null,
         feedback: {
-          text: isCorrect ? "Correct! Massive Speed Boost!" : "Incorrect! Stumble Penalty.",
+          text: isCorrect
+            ? "Correct! Massive Speed Boost!"
+            : answer === null
+              ? "Missed! Steer into a portal next time."
+              : "Incorrect! Stumble Penalty.",
           isCorrect
         }
       }));
 
-      setTimeout(() => setUiState(prev => ({ ...prev, feedback: null })), 3000);
+      timeouts.push(setTimeout(() => setUiState(prev => ({ ...prev, feedback: null })), 3000));
     };
+
+    let lastUiScore = gameState.current.score;
+    let ended = false;
 
     const animate = () => {
       animationId = requestAnimationFrame(animate);
-      const delta = clock.getDelta();
+      // Cap delta so a backgrounded tab cannot teleport the world; dt60 === 1 at 60 fps
+      const delta = Math.min(clock.getDelta(), 0.1);
+      const dt60 = delta * 60;
       const state = gameState.current;
 
-      if (Math.random() < 0.1) {
+      if (state.score !== lastUiScore) {
+        lastUiScore = state.score;
         setUiState(prev => ({ ...prev, score: state.score }));
       }
 
-      if (state.score >= 1000 && onEnd) {
-        onEnd();
+      if (state.score >= 1000 && !ended) {
+        ended = true;
+        if (onEnd) onEnd();
         return;
       }
 
       if (!state.isBulletTime) {
         state.timeSinceLastPortal += delta;
-        state.speed += 0.0001; 
+        state.speed += 0.0001 * dt60;
         
         if (state.timeSinceLastPortal > 30) {
           triggerDecisionNode();
@@ -470,8 +515,8 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
 
       // Physics
       if (state.isJumping) {
-        state.velocity.y += GRAVITY;
-        runner.position.y += state.velocity.y;
+        state.velocity.y += GRAVITY * dt60;
+        runner.position.y += state.velocity.y * dt60;
         if (runner.position.y <= 1) {
           runner.position.y = 1;
           state.isJumping = false;
@@ -480,7 +525,7 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
       }
 
       if (state.isSliding) {
-        state.slideTimer--;
+        state.slideTimer -= dt60;
         if (state.slideTimer <= 0) {
           state.isSliding = false;
           gsap.to(runner.scale, { y: 1, duration: 0.2 });
@@ -495,11 +540,11 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
         const activeMeshes = pool.getActive();
         for (let i = activeMeshes.length - 1; i >= 0; i--) {
           const obj = activeMeshes[i];
-          obj.position.z += effectiveSpeed;
+          obj.position.z += effectiveSpeed * dt60;
 
           if (obj.userData.type === 'token') {
-            obj.rotation.y += 0.05;
-            obj.rotation.x += 0.02;
+            obj.rotation.y += 0.05 * dt60;
+            obj.rotation.x += 0.02 * dt60;
           }
 
           const dist = runner.position.distanceTo(obj.position);
@@ -519,7 +564,7 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
                 const mat = runner.material as THREE.MeshStandardMaterial;
                 const originalEmissive = mat.emissive.getHex();
                 mat.emissive.setHex(0xff0000);
-                setTimeout(() => mat.emissive.setHex(originalEmissive), 200);
+                timeouts.push(setTimeout(() => mat.emissive.setHex(originalEmissive), 200));
 
                 pool.release(obj);
               }
@@ -534,29 +579,28 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
       // Move Portals
       for (let i = activePortals.length - 1; i >= 0; i--) {
         const portal = activePortals[i];
-        portal.position.z += effectiveSpeed;
-        portal.children[0].rotation.z -= 0.02; // Rotate torus
+        portal.position.z += effectiveSpeed * dt60;
+        portal.children[0].rotation.z -= 0.02 * dt60; // Rotate torus
 
         const dist = runner.position.distanceTo(portal.position);
         if (dist < 1.5) {
           resolveDecision(portal.userData.answer);
-          activePortals.forEach(p => scene.remove(p));
-          activePortals.length = 0;
+          removePortalRow();
           break;
         } else if (portal.position.z > 10) {
-          scene.remove(portal);
-          activePortals.splice(i, 1);
+          // Whole row missed — resolve as a miss so bullet time always terminates
+          resolveDecision(null);
+          removePortalRow();
+          break;
         }
       }
 
-      // Camera follow
-      camera.position.x += (runner.position.x * 0.5 - camera.position.x) * 0.1;
+      // Camera follow (frame-rate-independent smoothing)
+      camera.position.x += (runner.position.x * 0.5 - camera.position.x) * (1 - Math.pow(0.9, dt60));
       
       composer.render();
     };
 
-    // Simulate loading delay for demonstration
-    setTimeout(() => manager.onLoad(), 500);
     animate();
 
     // --- Responsive Design ---
@@ -573,33 +617,39 @@ export default function CPETGame3D({ onEnd }: { onEnd?: () => void }) {
       inputManager.dispose();
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationId);
-      if (mountRef.current) mountRef.current.removeChild(renderer.domElement);
+      timeouts.forEach(clearTimeout);
+      gsap.killTweensOf(runner.position);
+      gsap.killTweensOf(runner.scale);
+      removePortalRow();
+      [poolVO2, poolHR, poolVCO2, poolObstacleLow, poolObstacleHigh].forEach(p => p.disposeAll());
+      trackGeo.dispose();
+      trackMat.dispose();
+      gridHelper.geometry.dispose();
+      gridHelper.material.dispose();
+      runnerGeo.dispose();
+      [runnerMat, matVO2, matHR, matVCO2, matObstacle, matCloud, matPortal].forEach(m => m.dispose());
+      composer.dispose();
       renderer.dispose();
+      themeRef.current = null;
+      mount.removeChild(renderer.domElement);
     };
   }, []);
 
   // --- Dynamic Theming Effect ---
+  // Updates the live scene in place; the scene itself is built once in the main effect.
   useEffect(() => {
-    // We animate the background colour of the scene directly if we had access to it here,
-    // but since scene is inside the other useEffect, we handle the DOM classes here.
-    // The Three.js scene background interpolation can be handled by exposing the scene or 
-    // simply re-rendering. For a true 500ms linear interpolation in Three.js, we'd need 
-    // a ref to the scene. Let's do a quick DOM transition for the HUD.
+    isDarkRef.current = isDarkMode;
+    const t = themeRef.current;
+    if (!t) return;
+    const bgHex = isDarkMode ? 0x0f172a : 0xf5f6f8;
+    (t.scene.background as THREE.Color).setHex(bgHex);
+    (t.scene.fog as THREE.FogExp2).color.setHex(bgHex);
+    t.bloomPass.enabled = isDarkMode;
+    t.ambientLight.intensity = isDarkMode ? 0.6 : 1.5;
+    t.emissives.forEach(([mat, darkHex]) => {
+      mat.emissive.setHex(isDarkMode ? darkHex : 0x000000);
+    });
   }, [isDarkMode]);
-
-  if (uiState.isLoading) {
-    return (
-      <div className="w-full h-screen flex items-center justify-center bg-background-dark text-white font-display">
-        <div className="flex flex-col items-center gap-4">
-          <span className="material-symbols-outlined text-6xl text-primary animate-spin">sync</span>
-          <h2 className="text-2xl font-bold tracking-widest uppercase">Loading Assets</h2>
-          <div className="w-64 h-2 bg-surface-border rounded-full overflow-hidden">
-            <div className="h-full bg-primary transition-all duration-300" style={{ width: `${uiState.loadProgress}%` }}></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={`relative w-full h-screen overflow-hidden touch-none font-display transition-colors duration-500 ${isDarkMode ? 'bg-background-dark text-white' : 'bg-background-light text-slate-900'}`}>

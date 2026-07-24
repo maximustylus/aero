@@ -1,3 +1,9 @@
+# macOS
+.DS_Store
+
+# Claude Code session-local tooling
+.claude/
+
 # Logs
 logs
 *.log
